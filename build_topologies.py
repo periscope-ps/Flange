@@ -102,7 +102,7 @@ def main():
     parser = argparse.ArgumentParser(description="Topology builder for test topologies in UNIS")
     parser.add_argument('unis', 
                         help="Address of the UNIS to connect to (must include http://)")
-    parser.add_argument('-t', '--topology', choices=["osiris", "ring"], default="osiris", required=False,
+    parser.add_argument('-t', '--topology', choices=["all", "osiris", "ring"], default="osiris", required=False,
                         help="Topology name to build.")
     parser.add_argument('-r', "--ring", default=10, type=int,
                         help="Circumferernce of a ring to build (for ring only)")
@@ -111,12 +111,12 @@ def main():
 
     args = parser.parse_args(sys.argv[1:])
     
-    if args.topology == "osiris" or args.topology == "*":
+    if args.topology == "osiris" or args.topology == "all":
         print("Building osiris")
         osiris(args.unis)
         print("Done!\n")
         
-    if args.topology == "ring" or args.topology == "*":
+    if args.topology == "ring" or args.topology == "all":
         print("Building ring/spur with {0} circumference and spurs of length {1}".format(args.ring, args.spur))
         ring_spur(args.unis, args.ring, args.spur)
         print("Done!\n")
