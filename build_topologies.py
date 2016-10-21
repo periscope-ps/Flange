@@ -5,7 +5,6 @@ from unis.models.lists import UnisCollection
 import itertools
 
 
-
 def commit(target):
     collections = ["ports", "nodes", "links", "paths", "networks", 
                    "domains", "topologies", "exnodes", "extents"]
@@ -15,17 +14,16 @@ def commit(target):
         for item in getattr(target, collection):
             item.commit()
 
-
-
 def node(rt, name):
     node = Node({"name": name})
     rt.insert(node)
     return node
 
-def port(rt, node):
-    port = Port({"name": ":".join([node.name, "port1"])})
+def port(rt, node=None):
+    name = node.name if node else "ORPHANED"
+    port = Port({"name": ":".join([name, "port1"])})
     rt.insert(port)
-    node.ports = [port]
+    if node: node.ports = [port]
     return port
 
 def link(rt, mapping):
@@ -91,10 +89,18 @@ def ring_spur(url, ring, spurs):
         rt.insert(domain)
         topology(rt, "ring", nodes, ports, [], [domain])
         commit(rt)
+
+def orphaned_items(url):
+    with Runtime(url) as rt:
+        n = node(rt, "in-orpaned-domain")
+        p = port(rt, n)
+        domain = Domain({"name": "orphaned-domain", "nodes": [n], "ports": [p]})
+        rt.insert(domain) 
         
-
-
-
+        n = node(rt, "orphaned-node")
+        p = port(rt)
+        commit(rt)
+            
 def main():
     import sys
     import argparse
@@ -102,7 +108,8 @@ def main():
     parser = argparse.ArgumentParser(description="Topology builder for test topologies in UNIS")
     parser.add_argument('unis', 
                         help="Address of the UNIS to connect to (must include http://)")
-    parser.add_argument('-t', '--topology', choices=["all", "osiris", "ring"], default="osiris", required=False,
+    parser.add_argument('-t', '--topology', default="osiris", required=False,
+                        choices=["all", "osiris", "ring", "orphans"], 
                         help="Topology name to build.")
     parser.add_argument('-r', "--ring", default=10, type=int,
                         help="Circumferernce of a ring to build (for ring only)")
@@ -121,6 +128,10 @@ def main():
         ring_spur(args.unis, args.ring, args.spur)
         print("Done!\n")
     
+    if args.topology == "orphans" or args.topology == "all":
+        print("Building orphans")
+        orphaned_items(args.unis)
+        print("Done!\n")
     
 if __name__ == "__main__": 
     main()
