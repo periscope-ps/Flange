@@ -1,6 +1,7 @@
 from unis.models import *
 from unis.runtime import Runtime
 import networkx as nx
+from . import FlangeTree
 
 class unis(FlangeTree):
     "Retrieves a graph from a UNIS server."
