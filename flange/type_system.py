@@ -6,9 +6,7 @@ Type system for merging rules in Flange
 
 import collections
 import operator
-
-from graph import Graph
-from graph import Node
+import networkx as nx
 
 class app:
     def __init__(self, iD, weight, source_site, destination_site):
@@ -25,8 +23,8 @@ class app:
     def print_application (self):
         print("### Application %s Details ###\n" %(self.Id))
         print("Weight assigned = %s" %(self.weight))
-        print("Source node = %s" %(self.source.get_id()))
-        print("Destination node = %s" %(self.destination.get_id()))
+        print("Source node = %s" %(self.source))
+        print("Destination node = %s" %(self.destination))
         print("Bandwidth required = %s" %(self.demand))
         print("-------------------------------------------------------------------------------------------\n")
 
@@ -57,8 +55,8 @@ class FlowGroup:
     def print_flowgroup (self):
         util = Utils()
         print("### FlowGroup %s Details ###\n" %(self.id))
-        print("Source = %s" %(self.source.get_id()))
-        print("Destination = %s" %(self.destination.get_id()))
+        print("Source = %s" %(self.source))
+        print("Destination = %s" %(self.destination))
         print("Weight = %s" %(self.weight))
         print("Total Demand = %s" %(self.total_demand))
         print("Allocated = %s" %(self.allocated))
@@ -66,6 +64,20 @@ class FlowGroup:
         print("\nPreferred Tunnels [Allocation Details]:\n")
         util.print_tunnels(self.preferred_tunnels)
         print("-------------------------------------------------------------------------------------------\n")
+
+class Edge:
+    def __init__(self, source, des):
+        self.source = source
+        self.des = des
+
+    def __setattr__(self, name, value):
+        if name == "weight":
+            g.get_edge_data(self.source, self.des)[name] = value
+        else:
+            object.__setattr__(self, name, value)
+
+    def __getattr__(self, name):
+        return g.get_edge_data(self.source, self.des)[name] 
 
 class Tunnel:
     def __init__(self, nodes):
@@ -77,11 +89,8 @@ class Tunnel:
         self.available_bandwidth = 0
 
     def add_channels(self):
-        for i in range (0, len(self.nodes)):
-            if i != (len(self.nodes) - 1):
-                e = self.nodes[i].get_edge(self.nodes[i+1])
-                if e:
-                    self.channels.append(e)
+        for (src, dst) in zip(self.nodes[:-1], self.nodes[1:]):
+            self.channels.append(Edge(src, dst))
 
     def set_total_bandwidth (self):
         min_total_bandwidth = min(map ((lambda edge: edge.weight), self.channels))
@@ -90,10 +99,7 @@ class Tunnel:
         self.available_bandwidth = min_total_bandwidth
 
     def request_bandwidth (self, demand):
-        min_bandwidth = min(map((lambda edge: edge.weight), self.channels))
-        print(list(map(lambda edge: (edge.source.get_id(), edge.des.get_id(), edge.weight), self.channels)))
-        #print(min_bandwidth, demand, list(map(lambda edge: "{0}-->{1} {2}".format(edge.source.get_id(), edge.des.get_id(), edge.weight), self.channels)))
-        #print(min_bandwidth, demand)
+        min_bandwidth = min(map(lambda edge: edge.weight, self.channels))
         if min_bandwidth != 0:
             if demand >= min_bandwidth:
                 self.available_bandwidth = 0
@@ -109,22 +115,22 @@ class Tunnel:
             return 0
 
     def __repr__(self):
-        return "{0} ====[{1:.2f}] {2}".format(self.channels[0].source.get_id(), self.channels[0].weight, self.channels[-1].des.get_id())
+        return "{0} ====[{1:.2f}] {2}".format(self.channels[0].source, self.channels[0].weight, self.channels[-1].des)
 
     def print_tunnel (self):
         print("Tunnel Path :", end="")
-        print("%s ====[%s] %s" %(self.channels[0].source.get_id(), self.channels[0].weight, self.channels[0].des.get_id()), end="")
+        print("%s ====[%s] %s" %(self.channels[0].source, self.channels[0].weight, self.channels[0].des), end="")
         for i in range (1, len(self.channels), 1):
             if (self.channels[i-1].des == self.channels[i].source):
-                print("%s ====[%s] %s" %(self.channels[i].source.get_id(), self.channels[i].weight, self.channels[i].des.get_id()), end="")
+                print("%s ====[%s] %s" %(self.channels[i].source, self.channels[i].weight, self.channels[i].des), end="")
             else:
-                print("%s ====[%s] %s" %(self.channels[i].des.get_id(), self.channels[i].weight, self.channels[i].source.get_id()), end="")
+                print("%s ====[%s] %s" %(self.channels[i].des, self.channels[i].weight, self.channels[i].source), end="")
         print("\nTunnel total bandwidth = %s" %(self.total_bandwidth))
         print("Tunnel available bandwidth = %s" %(min(map ((lambda edge: edge.weight), self.channels))))
 
 class Utils:
     def assign_tunnels (self, flowG):
-        paths = g.find_all_paths(flowG.source, flowG.destination)
+        paths = nx.all_simple_paths(g, flowG.source, flowG.destination)
         FG_Tunnels = {}    
 
         for tunnel in paths:
@@ -162,7 +168,6 @@ class B4_Max_Min_Fairshare:
                         request_bw = flwG.demand
 
                     tup = flwG.preferred_tunnels.items()
-                    print("\n", list(tup))
 
                     for t in tup:
                         allocated_bw = t[0].request_bandwidth(request_bw)
@@ -202,7 +207,7 @@ class B4_Max_Min_Fairshare:
 
 if __name__ == '__main__':
     util = Utils()
-    g = Graph()
+    g = nx.Graph() # TODO: No global G
 
     nodeA = g.add_node('A')
     nodeB = g.add_node('B')
@@ -211,34 +216,34 @@ if __name__ == '__main__':
     nodeE = g.add_node('E')
     nodeF = g.add_node('F')
 
-    g.add_edge('A', 'B', 7)  
-    g.add_edge('A', 'C', 9)
-    g.add_edge('A', 'F', 14)  
-    g.add_edge('B', 'C', 10)
-    g.add_edge('B', 'D', 15)
-    g.add_edge('C', 'D', 11)
-    g.add_edge('C', 'F', 6)
-    g.add_edge('D', 'E', 6)
-    g.add_edge('E', 'F', 9)
+    g.add_edge('A', 'B', weight=7)  
+    g.add_edge('A', 'C', weight=9)
+    g.add_edge('A', 'F', weight=14)  
+    g.add_edge('B', 'C', weight=10)
+    g.add_edge('B', 'D', weight=15)
+    g.add_edge('C', 'D', weight=11)
+    g.add_edge('C', 'F', weight=6)
+    g.add_edge('D', 'E', weight=6)
+    g.add_edge('E', 'F', weight=9)
 
 #    nodeA = g.add_node('A')
 #    nodeB = g.add_node('B')
 #    nodeC = g.add_node('C')
 #    nodeD = g.add_node('D')
 #
-#    g.add_edge('A', 'B', 10)  
-#    g.add_edge('A', 'C', 10)
-#    g.add_edge('A', 'D', 5)  
-#    g.add_edge('B', 'C', 10)
-#    g.add_edge('C', 'D', 5)
+#    g.add_edge('A', 'B', weight=10)  
+#    g.add_edge('A', 'C', weight=10)
+#    g.add_edge('A', 'D', weight=5)  
+#    g.add_edge('B', 'C', weight=10)
+#    g.add_edge('C', 'D', weight=5)
 
 
     #g.print_graph()
     #g.print_paths()
 
-    app1 = app("app1", 10, nodeA, nodeB)
-    app2 = app("app2", 1, nodeA, nodeB)
-    app3 = app("app3", 0.5, nodeA, nodeC)
+    app1 = app("app1", 10, 'A', 'B')
+    app2 = app("app2", 1, 'A', 'B')
+    app3 = app("app3", 0.5, 'A', 'C')
 
     app1.set_demand(15)
     app2.set_demand(5)
@@ -248,8 +253,8 @@ if __name__ == '__main__':
     app2.print_application()
     app3.print_application()
 
-    FG1 = FlowGroup("fg1", nodeA, nodeB)
-    FG2 = FlowGroup("fg2", nodeA, nodeC)
+    FG1 = FlowGroup("fg1", 'A', 'B')
+    FG2 = FlowGroup("fg2", 'A', 'C')
 
     FG1.add_app(app1)
     FG1.add_app(app2)
