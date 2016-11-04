@@ -1,4 +1,4 @@
-from . import FlangeTree
+from ._internal import FlangeTree
 
 class GroupCondition(FlangeTree):
     def __init__(self, predicate, selector, graph):

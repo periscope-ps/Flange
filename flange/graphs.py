@@ -1,7 +1,7 @@
 from unis.models import *
 from unis.runtime import Runtime
 import networkx as nx
-from . import FlangeTree
+from ._internal import FlangeTree
 
 class unis(FlangeTree):
     "Retrieves a graph from a UNIS server."
@@ -35,23 +35,30 @@ class unis(FlangeTree):
 
 class graph(FlangeTree):
     linear = {"nodes": ["port1","port2","port3","port4"],
-              "edges": [("port1", "port2"), ("port2", "port3"),("port3", "port4")]}
+              "edges": [("port1", "port2", True), ("port2", "port3", True),("port3", "port4", True)]}
+
+    ring = {"nodes": ["port1", "port2", "port3", "port4"],
+            "edges": [("port1", "port2", True), ("port2", "port3", True),("port3", "port4", True), ("port4", "port1", True)]}
 
     def __init__(self, topology="linear", nodes=None, edges=None):
-        g = nx.Graph()
+        g = nx.DiGraph()
 
         if nodes or edges:
             topology = {"nodes": nodes if nodes else [],
                         "edges": edges if edges else []}
         else:
-            topology = graph.__getattribute__(graph, topology)
+            try:
+                topology = graph.__getattribute__(graph, topology)
+            except AttributeError as e:
+                raise Exception("No pre-defined graph with name '{0}'".format(topology))
 
 
         for port in topology["nodes"]:
             g.add_node(port, id=port)
 
-        for link in topology["edges"]:
-            g.add_edge(link[0], link[1])
+        for (src, sink, symmetric) in topology["edges"]:
+            g.add_edge(src, sink)
+            if symmetric: g.add_edge(sink, src)
 
         self.graph = g
 

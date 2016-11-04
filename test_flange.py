@@ -1,7 +1,11 @@
 import unittest
 from unis.models import *
 from unis.runtime import Runtime
-
+from flange.conditions import *
+from flange.roots import *
+from flange.graphs import *
+from flange.locations import *
+from flange import *
 
 def test(case=None):
     "Run tests by name...helpful in jupyter notebook"
@@ -133,6 +137,11 @@ class Test_graph(unittest.TestCase):
         g = graph()()
         self.assertEqual(len(g.nodes()), 4)
         self.assertEqual(len(g.edges()), 3)
+
+    def test_ring(self):
+        g = graph(topology="ring")()
+        self.assertEqual(len(g.nodes()), 4)
+        self.assertEqual(len(g.edges()), 4)
 
 class TestGroupConditions(unittest.TestCase):
     def test_exists_pass(self):

@@ -1,4 +1,4 @@
-from . import FlangeTree
+from ._internal import *
 
 class rule(FlangeTree):
     """

@@ -1,6 +1,6 @@
 import networkx as nx
 import itertools
-from . import FlangeTree
+from ._internal import FlangeTree
 
 def between(criteria, src_selector, dst_selector, graph):
     """Finds a path bewteen the source and target selector where each hop
