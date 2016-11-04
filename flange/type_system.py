@@ -62,7 +62,7 @@ class FlowGroup:
         print("Weight = %s" %(self.weight))
         print("Total Demand = %s" %(self.total_demand))
         print("Allocated = %s" %(self.allocated))
-        print("\napplications = %s" %(map ((lambda x: x.Id), self.applist)))
+        print("\napplications = %s" %list(map ((lambda x: x.Id), self.applist)))
         print("\nPreferred Tunnels [Allocation Details]:\n")
         util.print_tunnels(self.preferred_tunnels)
         print("-------------------------------------------------------------------------------------------\n")
@@ -77,7 +77,7 @@ class Tunnel:
         self.available_bandwidth = 0
 
     def add_channels(self):
-        for i in range (0, len(self.nodes), 1):
+        for i in range (0, len(self.nodes)):
             if i != (len(self.nodes) - 1):
                 e = self.nodes[i].get_edge(self.nodes[i+1])
                 if e:
@@ -90,31 +90,37 @@ class Tunnel:
         self.available_bandwidth = min_total_bandwidth
 
     def request_bandwidth (self, demand):
-        min_bandwidth = min(map ((lambda edge: edge.weight), self.channels))
+        min_bandwidth = min(map((lambda edge: edge.weight), self.channels))
+        print(list(map(lambda edge: (edge.source.get_id(), edge.des.get_id(), edge.weight), self.channels)))
+        #print(min_bandwidth, demand, list(map(lambda edge: "{0}-->{1} {2}".format(edge.source.get_id(), edge.des.get_id(), edge.weight), self.channels)))
+        #print(min_bandwidth, demand)
         if min_bandwidth != 0:
             if demand >= min_bandwidth:
                 self.available_bandwidth = 0
                 for edge in self.channels:
                     edge.weight -= min_bandwidth
-                    return min_bandwidth
+                return min_bandwidth
             else:
                 self.available_bandwidth -= demand
                 for edge in self.channels:
                     edge.weight -= demand
-                    return demand
+                return demand
         else:
             return 0
 
+    def __repr__(self):
+        return "{0} ====[{1:.2f}] {2}".format(self.channels[0].source.get_id(), self.channels[0].weight, self.channels[-1].des.get_id())
+
     def print_tunnel (self):
-        print("Tunnel Path :")
-        print("%s ====[%s] %s" %(self.channels[0].source.get_id(), self.channels[0].weight, self.channels[0].des.get_id()))
+        print("Tunnel Path :", end="")
+        print("%s ====[%s] %s" %(self.channels[0].source.get_id(), self.channels[0].weight, self.channels[0].des.get_id()), end="")
         for i in range (1, len(self.channels), 1):
             if (self.channels[i-1].des == self.channels[i].source):
-                print("%s ====[%s] %s" %(self.channels[i].source.get_id(), self.channels[i].weight, self.channels[i].des.get_id()))
+                print("%s ====[%s] %s" %(self.channels[i].source.get_id(), self.channels[i].weight, self.channels[i].des.get_id()), end="")
             else:
-                print("%s ====[%s] %s" %(self.channels[i].des.get_id(), self.channels[i].weight, self.channels[i].source.get_id()))
-                print("\nTunnel total bandwidth = %s" %(self.total_bandwidth))
-                print("Tunnel available bandwidth = %s" %(min(map ((lambda edge: edge.weight), self.channels))))
+                print("%s ====[%s] %s" %(self.channels[i].des.get_id(), self.channels[i].weight, self.channels[i].source.get_id()), end="")
+        print("\nTunnel total bandwidth = %s" %(self.total_bandwidth))
+        print("Tunnel available bandwidth = %s" %(min(map ((lambda edge: edge.weight), self.channels))))
 
 class Utils:
     def assign_tunnels (self, flowG):
@@ -127,16 +133,16 @@ class Utils:
             t.set_total_bandwidth()
             FG_Tunnels[t] = len(tunnel)
 
-        flowG.preferred_tunnels = collections.OrderedDict(sorted(FG_Tunnels.items(), key=operator.itemgetter(1)))
+        presort = sorted(FG_Tunnels.items(), key=lambda e: str(e[0]))
+        flowG.preferred_tunnels = collections.OrderedDict(sorted(presort, key=operator.itemgetter(1)))
         tup = flowG.preferred_tunnels.items()
         for t in tup:
             flowG.preferred_tunnels[t[0]] = 0	#setting length value to zero for later use (to store allocated bandwidth from this tunnel) 
 
     def print_tunnels (self, FG_tunnel):
-        tup = FG_tunnel.items()
-        for t in tup:
-            t[0].print_tunnel()
-            print("Tunnel allocated bandwidth: %s\n" %(t[1]))
+        for (tunnel, allocation) in FG_tunnel.items():
+            tunnel.print_tunnel()
+            print("Tunnel allocated bandwidth: %s\n" %(allocation))
 
 class B4_Max_Min_Fairshare:
     def __init__(self):
@@ -156,6 +162,7 @@ class B4_Max_Min_Fairshare:
                         request_bw = flwG.demand
 
                     tup = flwG.preferred_tunnels.items()
+                    print("\n", list(tup))
 
                     for t in tup:
                         allocated_bw = t[0].request_bandwidth(request_bw)
@@ -174,10 +181,10 @@ class B4_Max_Min_Fairshare:
                 if flwG.demand != 0:
                     demands_satisfied = 0
 
-            tup = flwG.preferred_tunnels.items()
-            for t in tup:
-                if (min(map ((lambda edge: edge.weight), t[0].channels))) != 0:
-                    bottleneck = 0
+                tup = flwG.preferred_tunnels.items()
+                for t in tup:
+                    if (min(map ((lambda edge: edge.weight), t[0].channels))) != 0:
+                        bottleneck = 0
 
             if (demands_satisfied == 1) or (bottleneck == 1):
                 print("\n!!! B4_Max_Min_Fairshare Algorithm Terminated - Either Flow Graph demands satisfied or Bottleneck occured !!!\n")
@@ -214,6 +221,18 @@ if __name__ == '__main__':
     g.add_edge('D', 'E', 6)
     g.add_edge('E', 'F', 9)
 
+#    nodeA = g.add_node('A')
+#    nodeB = g.add_node('B')
+#    nodeC = g.add_node('C')
+#    nodeD = g.add_node('D')
+#
+#    g.add_edge('A', 'B', 10)  
+#    g.add_edge('A', 'C', 10)
+#    g.add_edge('A', 'D', 5)  
+#    g.add_edge('B', 'C', 10)
+#    g.add_edge('C', 'D', 5)
+
+
     #g.print_graph()
     #g.print_paths()
 
@@ -241,18 +260,4 @@ if __name__ == '__main__':
 
     b4_fairflow = B4_Max_Min_Fairshare()
     b4_fairflow.generate_TunnelGroup([FG1, FG2])
-
-'''
-nodeA = g.add_node('A')
-nodeB = g.add_node('B')
-nodeC = g.add_node('C')
-nodeD = g.add_node('D')
-
-    g.add_edge('A', 'B', 10)  
-    g.add_edge('A', 'C', 10)
-    g.add_edge('A', 'D', 5)  
-    g.add_edge('B', 'C', 10)
-    g.add_edge('C', 'D', 5)
-
-'''
 
