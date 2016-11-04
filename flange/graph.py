@@ -7,31 +7,31 @@ Graph representing the network
 class Edge:
     def __init__(self, source, des, weight):
         self.source = source
-	self.des = des
-	self.weight = weight
+        self.des = des
+        self.weight = weight
 
 class Node:
     def __init__(self, node):
         self.id = node
         self.adjacent = {}
-	self.edges = []
+        self.edges = []
 
     def __str__(self):
         return str([x.id for x in self.adjacent])
 
     def add_edge(self, edge):
-	self.edges.append(edge)
+        self.edges.append(edge)
 
     def get_edge(self, node):
-	for edge in self.edges:
-	    if edge.des == node:
-		return edge
-	    elif (edge.source == node):
-		return edge
+        for edge in self.edges:
+            if edge.des == node:
+                return edge
+            elif (edge.source == node):
+                return edge
 
     def print_edges(self):
-	for edge in self.edges:
-	   print "%s ==== %s" %(edge.source.get_id(), edge.des.get_id())
+        for edge in self.edges:
+            print("%s ==== %s" %(edge.source.get_id(), edge.des.get_id()))
 
     def add_neighbor(self, neighbor, weight=0):
         self.adjacent[neighbor] = weight
@@ -74,9 +74,9 @@ class Graph:
         if des not in self.vert_dict:
             self.add_node(des)
 
-	new_edge = Edge(self.vert_dict[src], self.vert_dict[des], cost)
-	self.vert_dict[src].add_edge(new_edge)
-	self.vert_dict[des].add_edge(new_edge)
+        new_edge = Edge(self.vert_dict[src], self.vert_dict[des], cost)
+        self.vert_dict[src].add_edge(new_edge)
+        self.vert_dict[des].add_edge(new_edge)
         self.vert_dict[src].add_neighbor(self.vert_dict[des], cost)
         self.vert_dict[des].add_neighbor(self.vert_dict[src], cost)
 
@@ -87,7 +87,7 @@ class Graph:
         path = path + [start]
         if start == end:
             return [path]
-        if not self.vert_dict.has_key(start.get_id()):
+        if not start.get_id() in self.vert_dict.keys():
             return []
         paths = []
         for node in self.vert_dict[start.get_id()].get_connections():
@@ -101,7 +101,7 @@ class Graph:
         path = path + [start]
         if start == end:
             return [path]
-        if not self.vert_dict.has_key(start):
+        if not start in self.vert_dict.keys():
             return []
         paths = []
         for node in self.vert_dict[start].get_neighbors():
@@ -112,25 +112,25 @@ class Graph:
         return paths
 
     def print_graph (self):
-	print "Graph edges with weights :\n"
-	for v in self:
+        print("Graph edges with weights :\n")
+        for v in self:
             for w in v.get_connections():
-            	vid = v.get_id()
-           	wid = w.get_id()
-            	print '( %s , %s, %3d)'  % ( vid, wid, v.get_weight(w))
-	print "--------------------------"
+                vid = v.get_id()
+                wid = w.get_id()
+                print('( %s , %s, %3d)'  % ( vid, wid, v.get_weight(w)))
+        print("--------------------------")
 
     def print_paths(self):
-	print "Graph nodes with neighbours:\n"
-    	for v in self:
-            print '[node%s] = %s' %(v.get_id(), self.vert_dict[v.get_id()])
-	print "-----------------------------"
+        print("Graph nodes with neighbours:\n")
+        for v in self:
+            print('[node%s] = %s' %(v.get_id(), self.vert_dict[v.get_id()]))
+        print("-----------------------------")
 
     def print_edges(self):
-	print "Graph Edges:\n"
-    	for v in self:
-            print 'node = %s edges : ' %(v.get_id())
-	    v.print_edges()
-	print "-----------------------------"
+        print("Graph Edges:\n")
+        for v in self:
+            print('node = %s edges : ' %(v.get_id()))
+            v.print_edges()
+        print("-----------------------------")
 
 
