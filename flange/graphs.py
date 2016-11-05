@@ -38,7 +38,8 @@ class graph(FlangeTree):
               "edges": [("port1", "port2", True), ("port2", "port3", True),("port3", "port4", True)]}
 
     ring = {"nodes": ["port1", "port2", "port3", "port4"],
-            "edges": [("port1", "port2", True), ("port2", "port3", True),("port3", "port4", True), ("port4", "port1", True)]}
+            "edges": [("port1", "port2", False), ("port2", "port3", False),
+                      ("port3", "port4", False), ("port4", "port1", False)]}
 
     def __init__(self, topology="linear", nodes=None, edges=None):
         g = nx.DiGraph()

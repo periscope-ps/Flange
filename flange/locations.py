@@ -94,8 +94,12 @@ class near(FlangeTree):
 
         return preferred[0]
 
-class inside(FlangeTree):
-    """Given a graph and a selector, returns a list of links that make up the min cut"""
+class inside(flange.FlangeTree):
+    """Given a graph and a selector, returns a list of links that make up the min cut
+    
+    TODO: Graph must have a clear "side-id-ness" to it to work...  
+          ###Source and ###Sink cannot both link to the same node.
+    """
     def __init__(self, selector):
         self.selector=selector
 
@@ -105,22 +109,28 @@ class inside(FlangeTree):
         synth = graph.subgraph(nodes) ## Get the subgraph indicated by the selector
         nx.set_edge_attributes(synth, 'capacity', 1)
 
-        #outbound = graph.out_edges_iter(nodes)  -- Switch unis to directed graph, then use
-        #inbound = graph.in_edges_iter(nodes)
-        outbound = graph.edges_iter(nodes)
-        inbound = graph.edges_iter(nodes)
-
+        print("all nodes", nodes)
+        print("init synth nodes:", synth.nodes())
+        print("init synth edges:", synth.edges())
+        outbound = list(graph.out_edges_iter(nodes))
+        inbound = list(graph.in_edges_iter(nodes))
+        print(inbound)
+        print(outbound)
 
         src = "##SOURCE##"
         synth.add_node(src)
         for edge in inbound:
-            synth.add_edge(src, edge[1], capacity=10)
+            if not synth.has_edge(*edge):
+                synth.add_edge(src, edge[1], capacity=10)
 
         sink = "##SINK##"
         synth.add_node(sink)
         for edge in outbound:
-            synth.add_edge(edge[0], sink, capacity=10)
+            if not synth.has_edge(*edge):
+                synth.add_edge(edge[0], sink, capacity=10)
 
+        draw(synth)
+        print("synth edges:", synth.edges())
         cut_value, partition = nx.minimum_cut(synth, s=src, t=sink, capacity='capacity')
         reachable, non_reachable = partition
 
@@ -129,5 +139,5 @@ class inside(FlangeTree):
             cutset.update((u, v) for v in nbrs if v in non_reachable)
             cut_value == sum(synth.edge[u][v]['capacity'] for (u, v) in cutset)
 
-        return cutset
 
+        return cutset
