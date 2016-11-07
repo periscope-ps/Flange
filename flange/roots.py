@@ -59,6 +59,25 @@ class switch(FlangeTree):
         raise NoValidChoice("No action take in switch")
 
 
+class group(FlangeTree):
+    """
+    Given a single graph, perform several actions.
+    Actions are evaluated independantly on the graph, then the combiner determines the final result.
+
+    Combiners include fair-flow or best-of.
+    """
+
+    def __init__(self, combiner, *actions):
+        self.combiner = combiner
+        self.actions = actions
+
+    def call(self, graph):
+        result = []
+        for actions in action:
+            result.push(action(graph))
+
+        return combiner(*result)
+
 class monitor(FlangeTree):
     """Rule prefixed by some gate conditions.  
     The idea is the gate conditions capture wether or not a new result is even possible.
