@@ -1,5 +1,5 @@
 from ._internal import FlangeTree
-from .errors import ActionFailureError, NoValidChoice
+from .errors import ActionFailureError, NoValidChoice, NoChange
 from . import actions 
 from . import conditions
 
@@ -57,3 +57,39 @@ class switch(FlangeTree):
             if rule.test():
                 return rule.action()
         raise NoValidChoice("No action take in switch")
+
+
+class monitor(FlangeTree):
+    """Rule prefixed by some gate conditions.  
+    The idea is the gate conditions capture wether or not a new result is even possible.
+    
+    In the long run-this class should be *automatically* constructed if dynamic
+    conditions are present in a rule.
+    
+    If re-execution is needed, returns the result of rule.
+    If re-execution is not needs, raises NoChange.
+
+    TODO: Make a variant that is a callback on data change instead of polling-based 'retry' based
+    TODO: Integrate with rule so it automatically creates this IF there is some dyanmic statement
+    """
+
+    def __init__(self, root, gate):
+        self.root = root
+        self.retry = None
+        prior = None
+
+    def __iter__(self): return self
+    def __next__(self): return self.next()
+    def __call__(self): return self.next()
+
+    def retry(self):
+        condtion = self.gate()
+        if condition == self.prior:
+            self.prior = condition
+            return True
+        else:
+            return False
+
+    def next(self):
+        if retry(): return root()
+        else: raise NoChange()

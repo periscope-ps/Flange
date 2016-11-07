@@ -6,3 +6,7 @@ class NoValidChoice(RuntimeError):
     "Indicates that a search returned zero valid options."
     pass
 
+class NoChange(RuntimeError):
+    "Indicates that nothing needs to be done to a graph."
+    pass
+
