@@ -1,5 +1,8 @@
 from ._internal import FlangeTree
 from .errors import ActionFailureError, NoValidChoice
+from . import actions 
+from . import conditions
+
 
 class rule(FlangeTree):
     """
@@ -22,6 +25,24 @@ class rule(FlangeTree):
                 raise ActionFailureError()
             return rslt
         return rslt
+
+class assure(FlangeTree):
+    """ 
+    Encapsualtes a common exists/place pattern for rules
+
+    assure(property, selector, graph) ==> 
+       rule(exists(property, selector, graph), 
+            place(property, selector graph)) 
+    """
+
+    def __init__(self, property, selector, graph):
+        self.rule = rule(conditions.exists(property, selector, graph), 
+                         actions.place(property, selector, graph))
+
+    def __call__(self, *args):
+        return self.rule(*args)
+
+
 
 class switch(FlangeTree):
     "A rule that always tests to True."

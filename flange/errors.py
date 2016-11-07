@@ -1,5 +1,5 @@
 class ActionFailureError(RuntimeError):
-    "Inidicates rule action was taken BUT the test still fails"
+    "Inidicates rule action was taken BUT the test of that rule still fails"
     pass
 
 class NoValidChoice(RuntimeError):
