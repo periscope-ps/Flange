@@ -5,7 +5,7 @@ from flange.conditions import *
 from flange.roots import *
 from flange.graphs import *
 from flange.locations import *
-from flange import *
+import flange
 
 def test(case=None):
     "Run tests by name...helpful in jupyter notebook"
@@ -70,7 +70,7 @@ class Test_rule(unittest.TestCase):
 
     def test_double_fail(self):
         c = rule(lambda *x: 4<3, lambda *x: [4])
-        self.assertRaises(ActionFailureError, c)
+        self.assertRaises(flange.ActionFailureError, c)
 
 class Test_switch(unittest.TestCase):
     FALSE = lambda *x: False
@@ -98,14 +98,23 @@ class Test_switch(unittest.TestCase):
         s = switch(rule(self.FALSE, lambda *x: None),
                    rule(self.FALSE, lambda *x: None),
                    rule(self.FALSE, lambda *x: None))
-        self.assertRaises(NoValidChoice, s)
+        self.assertRaises(flange.NoValidChoice, s)
 
 class Test_unis(unittest.TestCase):
     explicit_host = "http://192.168.100.200:8888"
 
-    def setUpClass():
+    @classmethod
+    def setUpClass(cls):
         unis._runtime_cache = {}
-        print("Cleared unis Runtime cache")
+
+        name = cls.__name__
+        try:
+            rt = unis()._runtime()
+        except Exception as e:
+            raise unittest.SkipTest("{0}: Error connecting to UNIS".format(name), e)
+
+        if len(rt.topologies) == 0: 
+            raise unittest.SkipTest("{0}: No topologies found in UNIS".format(name))
 
     def test_implict_host(self):
         b = unis()
@@ -136,7 +145,7 @@ class Test_graph(unittest.TestCase):
     def test_linear(self):
         g = graph()()
         self.assertEqual(len(g.nodes()), 4)
-        self.assertEqual(len(g.edges()), 3)
+        self.assertEqual(len(g.edges()), 6)
 
     def test_ring(self):
         g = graph(topology="ring")()
@@ -200,19 +209,20 @@ class TestGroupConditions(unittest.TestCase):
 
 class Test_inside(unittest.TestCase):
     def test(self):
-        i = inside(lambda x,g: int(g.node[x]["id"][-1]) < 3)(graph()())
+        g = graph("ring")
+        i = inside(lambda x,g: int(g.node[x]["id"][-1]) < 3)(g())
         r = {(e[0], e[1]) for e in i}
         self.assertEqual(r, {("port1", "port2")})
 
 class Test_on(unittest.TestCase):
     def test(self):
         o = on(lambda x,g: int(g.node[x]["id"][-1]) < 3)(graph()())
-        self.assertEqual(["port1", "port2"], o.nodes())
-        self.assertEqual(1, len(o.edges()))
+        self.assertEqual({"port1", "port2"}, set(o.nodes()))
+        self.assertEqual(2, len(o.edges()))
 
 class Test_place(unittest.TestCase):
     def test_placement(self):
-        p = place(lambda positions, g: {g.node[n]["id"]: "modified" for n in positions},
+        p = flange.place(lambda positions, g: {g.node[n]["id"]: "modified" for n in positions},
                   on(lambda x,g: int(g.node[x]["id"][-1]) < 3),
                   graph())
         self.assertEqual(p(), {"port1": "modified", "port2": "modified"})
@@ -228,4 +238,4 @@ class Test_near(unittest.TestCase):
         g = graph()()
         target = g["port2"]
         n = near(lambda x, g: True, lambda x,g: g[x] == target)(g)
-        self.assertEqual(n, "port1")
+        self.assertIn(n, ["port1", "port3"])

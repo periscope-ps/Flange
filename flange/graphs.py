@@ -1,6 +1,7 @@
 from unis.models import *
 from unis.runtime import Runtime
 import networkx as nx
+
 from ._internal import FlangeTree
 
 class unis(FlangeTree):
@@ -13,25 +14,40 @@ class unis(FlangeTree):
         self.ref = ref
 
     def __call__(self):
-        rt = self.cached_connection(self.source)
+        #TODO: This is a bare-bones buildling of the graph model; make it better
+        rt = self._runtime()
+        topology = rt
 
-        #TODO: This is a bare-bones buildling of the graph model
-        if self.ref == "*": topology = rt
-        else: topology= list(rt.topologies.where({"id": self.ref}))[0]
+        if not self.ref == "*": 
+            try:
+                topology= list(rt.topologies.where({"id": self.ref}))[0]
+            except IndexError:
+                raise ValueError("No topology named '{0}' found in UNIS instance {1}".format(self.ref, self.source)) from None 
+            
 
-        g = nx.Graph() #TODO: Digraph?
+        g = nx.DiGraph() 
         for port in topology.ports:
-            g.add_node(port["id"], **port)
+            #HACK: Grabbing __dict__ probably won't work for long...
+            g.add_node(port.id, **port.__dict__) 
+
         for link in topology.links:
-            g.add_edge(link.endpoints[0], link.endpoints[1], object=link, **link)
+            if not link.directed:
+                g.add_edge(link.endpoints[0].id, link.endpoints[1], **link.__dict__)
+                g.add_edge(link.endpoints[1].id, link.endpoints[2], **link.__dict__)
+            else:
+                g.add_edge(link.source.id, link.sink.id, **link.__dict__)
 
         return g
+
+    def _runtime(self):
+        return self.cached_connection(self.source)
 
     @classmethod
     def cached_connection(cls, source):
         rt = cls._runtime_cache.get(source, Runtime(source))
         cls._runtime_cache[source] = rt
         return rt
+
 
 class graph(FlangeTree):
     linear = {"nodes": ["port1","port2","port3","port4"],
@@ -51,7 +67,7 @@ class graph(FlangeTree):
             try:
                 topology = graph.__getattribute__(graph, topology)
             except AttributeError as e:
-                raise Exception("No pre-defined graph with name '{0}'".format(topology))
+                raise ValueError("No pre-defined graph with name '{0}'".format(topology)) from None
 
 
         for port in topology["nodes"]:
