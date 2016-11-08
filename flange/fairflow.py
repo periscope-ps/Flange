@@ -129,6 +129,32 @@ class Tunnel:
         print("Tunnel available bandwidth = %s" %(min(map ((lambda edge: edge.weight), self.channels))))
 
 class Utils:
+
+    def __init__ (self):
+        self.fg_id = 0
+        self.flowgroups = []
+
+    def assign_flowgroup (self, applist):
+        for app in applist:
+            flwg_assigned = False
+            for flwg in self.flowgroups:
+                if (flwg.source == app.source) and (flwg.destination == app.destination):
+                    flwg.add_app(app)
+                    flwg_assigned = True
+                    break
+            if not flwg_assigned:
+                flwg_id = self.fg_id + 1
+                self.fg_id += 1
+                new_flwg = FlowGroup("FLWG" + str(flwg_id), app.source, app.destination)
+                new_flwg.add_app(app)
+                self.flowgroups.append(new_flwg)
+
+        for flwg in self.flowgroups:
+            self.assign_tunnels(flwg)
+
+    def get_flowgroups (self):
+        return self.flowgroups
+
     def assign_tunnels (self, flowG):
         paths = nx.all_simple_paths(g, flowG.source, flowG.destination)
         FG_Tunnels = {}    
@@ -144,6 +170,10 @@ class Utils:
         tup = flowG.preferred_tunnels.items()
         for t in tup:
             flowG.preferred_tunnels[t[0]] = 0	#setting length value to zero for later use (to store allocated bandwidth from this tunnel) 
+
+    def print_flowgroups (self):
+        for flwg in self.flowgroups:
+            print("Flow Group : id = %s, source = %s, destination = %s" %(flwg.id, flwg.source, flwg.destination))
 
     def print_tunnels (self, FG_tunnel):
         for (tunnel, allocation) in FG_tunnel.items():
@@ -237,10 +267,6 @@ if __name__ == '__main__':
 #    g.add_edge('B', 'C', weight=10)
 #    g.add_edge('C', 'D', weight=5)
 
-
-    #g.print_graph()
-    #g.print_paths()
-
     app1 = app("app1", 10, 'A', 'B')
     app2 = app("app2", 1, 'A', 'B')
     app3 = app("app3", 0.5, 'A', 'C')
@@ -253,16 +279,11 @@ if __name__ == '__main__':
     app2.print_application()
     app3.print_application()
 
-    FG1 = FlowGroup("fg1", 'A', 'B')
-    FG2 = FlowGroup("fg2", 'A', 'C')
+    applist = [app1, app2, app3]
 
-    FG1.add_app(app1)
-    FG1.add_app(app2)
-    FG2.add_app(app3)
-
-    util.assign_tunnels(FG1)
-    util.assign_tunnels(FG2)
+    util.assign_flowgroup(applist)
+    fg_list = util.get_flowgroups()
 
     b4_fairflow = B4_Max_Min_Fairshare()
-    b4_fairflow.generate_TunnelGroup([FG1, FG2])
+    b4_fairflow.generate_TunnelGroup(fg_list)
 
