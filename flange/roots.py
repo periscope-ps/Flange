@@ -92,23 +92,20 @@ class monitor(FlangeTree):
     TODO: Integrate with rule so it automatically creates this IF there is some dyanmic statement
     """
 
-    def __init__(self, root, gate):
+    def __init__(self, root, gate=lambda: True):
         self.root = root
-        self.retry = None
-        prior = None
-
-    def __iter__(self): return self
-    def __next__(self): return self.next()
-    def __call__(self): return self.next()
+        self.gate = gate
+        self.prior = None
 
     def retry(self):
-        condtion = self.gate()
+        condition = self.gate()
         if condition == self.prior:
             self.prior = condition
-            return True
+            return False 
         else:
-            return False
+            self.prior = condition
+            return True 
 
-    def next(self):
-        if retry(): return root()
+    def __call__(self):
+        if self.retry(): return self.root()
         else: raise NoChange()
