@@ -1,4 +1,5 @@
 import unittest
+import os
 from unis.models import *
 from unis.runtime import Runtime
 
@@ -109,10 +110,17 @@ class Test_unis(unittest.TestCase):
         unis._runtime_cache = {}
 
         name = cls.__name__
+        rsp1 = os.system("ping -c 1 " + cls.explicit_host)
+        rsp2 = os.system("ping -c 1 " + unis.default_unis)
+
+        if rsp1 != 0 or rsp !=1:
+            raise unittest.SkipTest("{0}: Could not ping UNIS servers".format(name))
+
         try:
             rt = unis()._runtime()
         except Exception as e:
             raise unittest.SkipTest("{0}: Error connecting to UNIS".format(name), e)
+
 
         if len(rt.topologies) == 0: 
             raise unittest.SkipTest("{0}: No topologies found in UNIS".format(name))
