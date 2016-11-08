@@ -17,6 +17,16 @@ class Test_graph(unittest.TestCase):
         self.assertEqual(len(g.nodes()), 4)
         self.assertEqual(len(g.edges()), 4)
 
+    def test_dynamic(self):
+        g = graph(topology="dynamic")
+        self.assertEqual(len(g().nodes()), 3)
+        self.assertEqual(len(g().nodes()), 4)
+        self.assertEqual(len(g().nodes()), 5)
+        self.assertEqual(len(g().nodes()), 5)
+        self.assertEqual(len(g().nodes()), 6)
+        self.assertEqual(len(g().nodes()), 3)
+
+
 
 class Test_unis(unittest.TestCase):
     explicit_host = "http://192.168.100.200:8888"

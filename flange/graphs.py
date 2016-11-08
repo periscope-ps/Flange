@@ -57,17 +57,34 @@ class graph(FlangeTree):
             "edges": [("port1", "port2", False), ("port2", "port3", False),
                       ("port3", "port4", False), ("port4", "port1", False)]}
 
+
+    dynamic=[{"nodes": ["p1", "p2", "p3"], "edges": []},
+             {"nodes": ["p1", "p2", "p3", "p4"], "edges": []},
+             {"nodes": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
+             {"nodes": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
+             {"nodes": ["p1", "p2", "p3", "p4", "p5", "p6"], "edges": []}]
+
     def __init__(self, topology="linear", nodes=None, edges=None):
-        g = nx.DiGraph()
+        self.dynamic=0
 
         if nodes or edges:
-            topology = {"nodes": nodes if nodes else [],
+            self.topology = {"nodes": nodes if nodes else [],
                         "edges": edges if edges else []}
         else:
             try:
-                topology = graph.__getattribute__(graph, topology)
+                self.topology = graph.__getattribute__(graph, topology)
             except AttributeError as e:
                 raise ValueError("No pre-defined graph with name '{0}'".format(topology)) from None
+
+
+    def __call__(self):
+        g = nx.DiGraph()
+
+        try:
+            topology = self.topology[self.dynamic]
+            self.dynamic = (self.dynamic+1) % len(self.topology)
+        except:
+            topology = self.topology
 
 
         for port in topology["nodes"]:
@@ -78,6 +95,4 @@ class graph(FlangeTree):
             if symmetric: g.add_edge(sink, src)
 
         self.graph = g
-
-    def __call__(self):
         return self.graph
