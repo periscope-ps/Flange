@@ -1,5 +1,5 @@
 import unittest
-import os
+import urllib
 from unis.models import *
 from unis.runtime import Runtime
 
@@ -32,15 +32,19 @@ class Test_unis(unittest.TestCase):
     explicit_host = "http://192.168.100.200:8888"
 
     @classmethod
+    def _try_connection(cls, url):
+        name = cls.__name__
+        try: 
+            urllib.request.urlopen(url)
+        except:
+            raise unittest.SkipTest("{0}: Could not connect to UNIS server {1}".format(name, url))
+
+    @classmethod
     def setUpClass(cls):
         unis._runtime_cache = {}
 
-        name = cls.__name__
-        rsp1 = os.system("ping -c 1 " + cls.explicit_host)
-        rsp2 = os.system("ping -c 1 " + unis.default_unis)
-
-        if rsp1 != 0 or rsp !=1:
-            raise unittest.SkipTest("{0}: Could not ping UNIS servers".format(name))
+        cls._try_connection(cls.explicit_host)
+        cls._try_connection(unis.default_unis)
 
         try:
             rt = unis()._runtime()
