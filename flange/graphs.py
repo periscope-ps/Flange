@@ -102,4 +102,3 @@ class wrap(FlangeTree):
     "Wrap a reference to a graph"
     def __init__(self, g): self.g = g
     def __call__(self): return self.g
-
