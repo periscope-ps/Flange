@@ -88,6 +88,8 @@ class monitor(FlangeTree):
     If re-execution is needed, returns the result of rule.
     If re-execution is not needs, raises NoChange.
 
+    TODO: take a graph as the argument to "call"; pass the graph ***instance*** into the gate and the rule
+
     TODO: Make a variant that is a callback on data change instead of polling-based 'retry' based
     TODO: Integrate with rule so it automatically creates this IF there is some dyanmic statement
     """
