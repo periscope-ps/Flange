@@ -2,7 +2,7 @@ from unis.models import *
 from unis.runtime import Runtime
 import networkx as nx
 
-from ._internal import FlangeTree
+from ._internal import FlangeTree, FlangeQuery
 
 class unis(FlangeTree):
     "Retrieves a graph from a UNIS server."
@@ -102,3 +102,26 @@ class wrap(FlangeTree):
     "Wrap a reference to a graph"
     def __init__(self, g): self.g = g
     def __call__(self): return self.g
+
+
+class select(FlangeQuery):
+    def __init__(self, test):
+        self.test = test
+
+    def __call__(self, graph):
+        return test(graph)
+
+class op(FlangeQuery):
+    def __init__(self, fn, *args):
+        self.fn = fn
+        self.curried = args
+
+    def __call__(self, final):
+        args = [x for x in self.curried]
+        args.append(final)
+        return fn.call(*all_args)
+
+def nodes(graph): return graph.nodes()
+def qty(e): return len(e)
+def route(path): pass
+

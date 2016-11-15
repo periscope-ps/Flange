@@ -10,3 +10,11 @@ class FlangeTree(object):
         """
         return None
 
+class FlangeQuery(FlangeTree):
+    "Call is the same as the focus"
+
+    def __call__(self, graph):
+        "Process the passed graph"
+        raise RuntimeError("Must override the call method")
+
+    def focus(self, graph): return self(graph)

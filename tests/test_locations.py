@@ -19,9 +19,8 @@ class Test_on(unittest.TestCase):
 class Test_place(unittest.TestCase):
     def test_placement(self):
         p = flange.place(lambda positions, g: {g.node[n]["id"]: "modified" for n in positions},
-                  on(lambda x,g: int(g.node[x]["id"][-1]) < 3),
-                  graph())
-        self.assertEqual(p(), {"port1": "modified", "port2": "modified"})
+                  on(lambda x,g: int(g.node[x]["id"][-1]) < 3))
+        self.assertEqual(p(graph()()), {"port1": "modified", "port2": "modified"})
 
 class Test_around(unittest.TestCase):
     def test(self):

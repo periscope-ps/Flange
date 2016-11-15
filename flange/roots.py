@@ -27,7 +27,13 @@ class rule(FlangeTree):
         return rslt
 
     def focus(self, graph):
-        return (test.focus(graph), action.focus(graph))
+        try : test = self.test.focus(graph)
+        except: test = self.test(graph)
+
+        try: action = self.action.focus(graph)
+        except: action = self.action(graph)
+
+        return (test, action)
 
 class assure(FlangeTree):
     """ 

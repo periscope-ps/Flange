@@ -6,13 +6,11 @@ def update(graph, values): pass
 
 
 class place(FlangeTree):
-    def __init__(self, mod, at, graph):
+    def __init__(self, mod, at):
         self.mod = mod
         self.at = at
-        self.graph = graph
 
-    def __call__(self, *args):
-        g = self.graph()
-        position = self.at(g)
-        g2 = self.mod(position, g)
+    def __call__(self, graph):
+        position = self.at(graph)
+        g2 = self.mod(position, graph)
         return g2

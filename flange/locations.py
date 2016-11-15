@@ -2,35 +2,42 @@ import networkx as nx
 import itertools
 from ._internal import FlangeTree
 
-def between(criteria, src_selector, dst_selector, graph):
-    """Finds a path bewteen the source and target selector where each hop
-       statisfies the given criteria.
+class between(FlangeTree):
+    def __init__(self, criteria, src_selector, dst_selector):
+        self.criteria = criteria
+        self.src_selector = src_selector
+        self.dst_selector = dst_selector
 
-    TODO: Convert to class/curried style
-    TODO: handle multple sources or targets...
-    TODO: Modify so it finds a set of paths that collectively satisfy the
-            criteria instead of just one path that always does.  That way
-            you can build a flow from A to B where no individual link is
-            sufficient but combinations of links are.
-    """
+    def __call__(self, graph):
+        """Finds a path bewteen the source and target selector where each hop
+           statisfies the given criteria.
 
-    try:
-        s = next(filter(src_selector, g.nodes()))
-        t = next(filter(dst_selector, g.nodes()))
-    except StopIteration:
-        raise NoValidChoice("Source or target set empty")
+        TODO: handle multple sources or targets...
+        TODO: Modify so it finds a set of paths that collectively satisfy the
+                criteria instead of just one path that always does.  That way
+                you can build a flow from A to B where no individual link is
+                sufficient but combinations of links are.
+        """
 
-    allpaths = nx.all_simple_paths(graph, s, t)
-    return allpaths
+        paths = self.focus(graph)
+        ranked = sorted(paths, self.criteria)
+        
+        try:
+            return ranked[0] 
+        except IndexError:
+            raise NoValidChoice("No paths found from selected source/target node(s)", )
 
 
-    nx.shortest_path(s, t)
+    def focus(self, graph):
+        try:
+            s = next(filter(self.src_selector, graph.nodes()))
+            t = next(filter(self.dst_selector, graph.nodes()))
+        except StopIteration:
+            raise NoValidChoice("Source or target set empty")
 
-    # Get all paths froms src to target
-    # For each path, find a spot that matches criteria
-    # Do something "smart" so you use a few spots as possible (so if paths intersect and the intersection matches, use it)
-    # exclude SRC and target
-    pass
+        allpaths = nx.all_simple_paths(graph, s, t)
+
+        return allpaths
 
 
 class on(FlangeTree):
@@ -47,6 +54,9 @@ class on(FlangeTree):
         synth = graph.subgraph(nodes)
         return synth
 
+    def focus(self, graph):
+        return self.selector(graph)
+
 class around(FlangeTree):
     """Given a graph and a selector, returns a list of links that go in or out of the 
     selected nodes"""
@@ -59,6 +69,9 @@ class around(FlangeTree):
         outbound = graph.edges_iter(nodes)
         inbound = graph.edges_iter(nodes)
         return set(itertools.chain(outbound, inbound))
+    
+    def focus(self, graph):
+        return self.selector(graph)
 
 class near(FlangeTree):
     """Find a node that is topologically 'near' the selection and passes the criteria.
@@ -93,6 +106,9 @@ class near(FlangeTree):
         preferred = min(valid, key=lambda e: e[1])
 
         return preferred[0]
+    
+    def focus(self, graph):
+        return self.selector(graph)
 
 class inside(FlangeTree):
     """Given a graph and a selector, returns a list of links that make up the min cut
@@ -134,3 +150,6 @@ class inside(FlangeTree):
 
 
         return cutset
+
+    def focus(self, graph):
+        return self.selector(graph)

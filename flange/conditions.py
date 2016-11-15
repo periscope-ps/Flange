@@ -1,19 +1,20 @@
 from ._internal import FlangeTree
 
 class GroupCondition(FlangeTree):
-    def __init__(self, predicate, selector, graph):
+    def __init__(self, predicate, selector):
         self.predicate = predicate
         self.selector = selector
-        self.graph = graph
 
-    def __call__(self, *args):
-        g = self.graph()
-        raw_items = self.selector(g)
-        passing_items = [x for x in raw_items if self.predicate(x, g)]
+    def __call__(self, graph):
+        raw_items = self.selector(graph)
+        passing_items = [x for x in raw_items if self.predicate(x, graph)]
         return self._test(passing_items, raw_items)
 
     def _test(self, passing_items, raw_items):
         raise Error("Not implemented")
+
+    def focus(self, graph):
+        return self.selector(graph)
 
 class exists(GroupCondition):
     def _test(self,  passing_items, raw_items):
