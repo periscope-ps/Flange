@@ -1,6 +1,8 @@
 from unis.models import *
 from unis.runtime import Runtime
 import networkx as nx
+import itertools
+from functools import reduce
 
 from ._internal import FlangeTree, FlangeQuery
 
@@ -104,6 +106,8 @@ class wrap(FlangeTree):
     def __call__(self): return self.g
 
 
+### Graph transformation operators
+
 class select(FlangeQuery):
     def __init__(self, test):
         self.test = test
@@ -124,4 +128,18 @@ class op(FlangeQuery):
 def nodes(graph): return graph.nodes()
 def qty(e): return len(e)
 def route(path): pass
+def chain(*ops): 
+    """Apply each operation in a sequence, chaining the result 
+    of the first to the input of the second.
 
+    Operations should be f(arg, graph).  Graph is not chained, but remains constant
+    through the chaining.
+    """
+
+    each_op = lambda op_graph, acc: op_graph[0](acc, op_graph[1])
+    return lambda val, graph: reduce(each_op, zip(ops, itertools.repeat(graph)), val)
+
+def startsWith(part): return lambda val, *args: val.startswith(part)
+def att(att_id): 
+    "Get a node attribute"
+    return lambda node_id, graph: nx.get_node_attributes(graph, node_id)[att_id]

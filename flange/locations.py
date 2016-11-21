@@ -80,13 +80,13 @@ class near(FlangeTree):
     * Criteria is a function that determines if a node passes the selection criteria
 
     TODO: Custom/pluggable nearness functions (such as BFS or custom weighting functions)
+    TODO: Mechanism for return mulitple results
     """
     def __init__(self, criteria, selector):
         self.criteria = criteria
         self.selector = selector
 
     def __call__(self, graph):
-
         selector = lambda x: self.selector(x, graph)
         criteria = lambda x: self.criteria(x, graph)
         sources = list(filter(selector, graph.nodes()))

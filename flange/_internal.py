@@ -1,6 +1,6 @@
 class FlangeTree(object):
     def __call__(self, graph):
-        "Process the passed graph"
+        "Process the passed graph;"
         raise RuntimeError("Must override the call method")
 
     def focus(self, graph):

@@ -86,7 +86,7 @@ class group(FlangeTree):
 
     def __call__(self, graph):
         result = []
-        for actions in action:
+        for action in self.actions:
             result.push(action(graph))
 
         return combiner(*result)
