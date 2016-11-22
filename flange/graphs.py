@@ -125,21 +125,57 @@ class op(FlangeQuery):
         args.append(final)
         return fn.call(*all_args)
 
-def nodes(graph): return graph.nodes()
-def qty(e): return len(e)
-def route(path): pass
-def chain(*ops): 
-    """Apply each operation in a sequence, chaining the result 
-    of the first to the input of the second.
+class att(FlangeTree):
+    def __init__(self, att_id, default=None):
+        self.att_id = att_id
+        self.default = default
+        
+    def _att(self, graph, node_id):
+        try:
+            return nx.get_node_attributes(graph, node_id)[self.att_id]
+        except:
+            return self.default
+        
+    def __call__(self, graph):
+        return [self._att(graph, node_id) for node_id in graph.nodes()]
 
-    Operations should be f(arg, graph).  Graph is not chained, but remains constant
-    through the chaining.
+
+class collect(FlangeTree):
+    """Gather nodes that pass a predcate into a hyper-node.
+    
+    predicate -- Return a list of node names to compress together
+    label -- Name for the node representing all combined nodes
+    
+    TODO: Put edge data on to indicate the original node nodes
+    TODO: Deal with edge properties (are they copied?  aggregated? modified?)
     """
+    
+    def __init__(self, predicate, label="*"):
+        self.predicate = predicate
+        self.label = label
 
-    each_op = lambda op_graph, acc: op_graph[0](acc, op_graph[1])
-    return lambda val, graph: reduce(each_op, zip(ops, itertools.repeat(graph)), val)
+    def __call__(self, graph):
+        group_nodes = self.predicate(graph)
+        stable_nodes = [node for node in graph.nodes() if node not in group_nodes]
+        
+        synth = graph.subgraph(stable_nodes)
+        synth.add_node(self.label)
+        
+        outbound = list(graph.out_edges_iter(group_nodes))
+        inbound = list(graph.in_edges_iter(group_nodes))
 
-def startsWith(part): return lambda val, *args: val.startswith(part)
-def att(att_id): 
-    "Get a node attribute"
-    return lambda node_id, graph: nx.get_node_attributes(graph, node_id)[att_id]
+        for (start, end) in inbound:
+            if not synth.has_edge(start, self.label) \
+                and start not in group_nodes:
+                synth.add_edge(start, self.label, **graph.get_edge_data(start, end))
+
+        for (start, end) in outbound:
+            if not synth.has_edge(self.label, end) \
+                and end not in group_nodes:
+                synth.add_edge(self.label, end, **graph.get_edge_data(start, end))
+
+        return synth
+
+
+def filter(FlangeTree):
+    pass
