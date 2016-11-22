@@ -89,7 +89,7 @@ class group(FlangeTree):
         for action in self.actions:
             result.push(action(graph))
 
-        return combiner(*result)
+        return self.combiner(*result)
 
     def focus(self, graph):
         return [action.focus(graph) for action in self.actions]
