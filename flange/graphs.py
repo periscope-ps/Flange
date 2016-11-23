@@ -176,6 +176,12 @@ class collect(FlangeTree):
 
         return synth
 
+class nodes(FlangeTree):
+    def __call__(self, graph):return graph.nodes()
 
-def filter(FlangeTree):
-    pass
+class startswith(FlangeTree):
+    def __init__(self, val):
+        self.val = val
+
+    def __call__(self, names):
+        return [name for name in names if name.startswith(self.val)] 

@@ -13,3 +13,8 @@ class FlangeTree(object):
         since that should be stateless...
         """
         return self(graph)
+
+    def __rshift__(self, other):
+        "Chaining operator.  Calls self, then passes result to call of other"
+        return lambda arg: other(self(arg))
+
