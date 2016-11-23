@@ -4,7 +4,7 @@ import networkx as nx
 import itertools
 from functools import reduce
 
-from ._internal import FlangeTree, FlangeQuery
+from ._internal import FlangeTree
 
 class unis(FlangeTree):
     "Retrieves a graph from a UNIS server."
@@ -108,14 +108,14 @@ class wrap(FlangeTree):
 
 ### Graph transformation operators
 
-class select(FlangeQuery):
+class select(FlangeTree):
     def __init__(self, test):
         self.test = test
 
     def __call__(self, graph):
         return test(graph)
 
-class op(FlangeQuery):
+class op(FlangeTree):
     def __init__(self, fn, *args):
         self.fn = fn
         self.curried = args
