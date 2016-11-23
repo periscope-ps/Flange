@@ -4,7 +4,7 @@ import networkx as nx
 import itertools
 from functools import reduce
 
-from ._internal import FlangeTree
+from ._internal import FlangeTree, autotree
 
 class unis(FlangeTree):
     "Retrieves a graph from a UNIS server."
@@ -107,13 +107,8 @@ class wrap(FlangeTree):
 
 
 ### Graph transformation operators
-
-class select(FlangeTree):
-    def __init__(self, test):
-        self.test = test
-
-    def __call__(self, graph):
-        return test(graph)
+@autotree("test")
+def select(self, graph): return test(graph)
 
 class op(FlangeTree):
     def __init__(self, fn, *args):
@@ -125,22 +120,19 @@ class op(FlangeTree):
         args.append(final)
         return fn.call(*all_args)
 
-class att(FlangeTree):
-    def __init__(self, att_id, default=None):
-        self.att_id = att_id
-        self.default = default
-        
+@autotree("att_id", default=None)
+def att(self, graph):
     def _att(self, graph, node_id):
         try:
             return nx.get_node_attributes(graph, node_id)[self.att_id]
         except:
             return self.default
         
-    def __call__(self, graph):
-        return [self._att(graph, node_id) for node_id in graph.nodes()]
+    return [self._att(graph, node_id) for node_id in graph.nodes()]
 
 
-class collect(FlangeTree):
+@autotree("predicate", label="*")
+def collect(self, graph):
     """Gather nodes that pass a predcate into a hyper-node.
     
     predicate -- Return a list of node names to compress together
@@ -149,39 +141,36 @@ class collect(FlangeTree):
     TODO: Put edge data on to indicate the original node nodes
     TODO: Deal with edge properties (are they copied?  aggregated? modified?)
     """
+
+    group_nodes = self.predicate(graph)
+    stable_nodes = [node for node in graph.nodes() if node not in group_nodes]
     
-    def __init__(self, predicate, label="*"):
-        self.predicate = predicate
-        self.label = label
+    synth = graph.subgraph(stable_nodes)
+    synth.add_node(self.label)
+    
+    outbound = list(graph.out_edges_iter(group_nodes))
+    inbound = list(graph.in_edges_iter(group_nodes))
 
-    def __call__(self, graph):
-        group_nodes = self.predicate(graph)
-        stable_nodes = [node for node in graph.nodes() if node not in group_nodes]
-        
-        synth = graph.subgraph(stable_nodes)
-        synth.add_node(self.label)
-        
-        outbound = list(graph.out_edges_iter(group_nodes))
-        inbound = list(graph.in_edges_iter(group_nodes))
+    for (start, end) in inbound:
+        if not synth.has_edge(start, self.label) \
+            and start not in group_nodes:
+            synth.add_edge(start, self.label, **graph.get_edge_data(start, end))
 
-        for (start, end) in inbound:
-            if not synth.has_edge(start, self.label) \
-                and start not in group_nodes:
-                synth.add_edge(start, self.label, **graph.get_edge_data(start, end))
+    for (start, end) in outbound:
+        if not synth.has_edge(self.label, end) \
+            and end not in group_nodes:
+            synth.add_edge(self.label, end, **graph.get_edge_data(start, end))
 
-        for (start, end) in outbound:
-            if not synth.has_edge(self.label, end) \
-                and end not in group_nodes:
-                synth.add_edge(self.label, end, **graph.get_edge_data(start, end))
+    return synth
 
-        return synth
+@autotree()
+def nodes(self, graph):
+    """Return the nodes of a graph.
+    TODO: Convert 'nodes' to an instance of something...so you can use it like 'nodes' instead of 'nodes()'
+    """
+    return graph.nodes()
 
-class nodes(FlangeTree):
-    def __call__(self, graph):return graph.nodes()
-
-class startswith(FlangeTree):
-    def __init__(self, val):
-        self.val = val
-
-    def __call__(self, names):
-        return [name for name in names if name.startswith(self.val)] 
+@autotree("val")
+def startswith(self, names):
+    "Passed a list, returns all xs where x.startswith(val) is true."
+    return [name for name in names if name.startswith(self.val)] 

@@ -18,3 +18,30 @@ class FlangeTree(object):
         "Chaining operator.  Calls self, then passes result to call of other"
         return lambda arg: other(self(arg))
 
+def autotree(*passed_args, **passed_kwargs):
+    def build_class(fn, name, passed_args, passed_kwargs):
+        def init(self, *args, **kwargs):
+            for (name, arg) in zip(passed_args, args):
+                self.__dict__[name] = arg
+
+            for (name, val) in passed_kwargs.items():
+                self.__dict__[name] = val
+
+            for (name, val) in kwargs.items():
+                try:
+                    passed_kwargs[name]   #Raises exception if name not defined at decorator
+                    self.__dict__[name] = val
+                except:
+                    raise Exception("Unknown keyword argument passed: {0}".format(name))
+
+                    
+        body_dict = {"__init__": init,
+                     "__call__": fn}
+
+        cls = type(name, (FlangeTree,), body_dict)
+        return cls
+    
+    def decorator(fn):
+        return build_class(fn, fn.__name__, passed_args, passed_kwargs)
+    
+    return decorator
