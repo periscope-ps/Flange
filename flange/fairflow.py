@@ -66,18 +66,19 @@ class FlowGroup:
         print("-------------------------------------------------------------------------------------------\n")
 
 class Edge:
-    def __init__(self, source, des):
+    def __init__(self, source, des, graph):
         self.source = source
         self.des = des
+        self.graph = graph
 
     def __setattr__(self, name, value):
         if name == "weight":
-            g.get_edge_data(self.source, self.des)[name] = value
+            self.graph.get_edge_data(self.source, self.des)[name] = value
         else:
             object.__setattr__(self, name, value)
 
     def __getattr__(self, name):
-        return g.get_edge_data(self.source, self.des)[name] 
+        return self.graph.get_edge_data(self.source, self.des)[name] 
 
 class Tunnel:
     def __init__(self, nodes):
@@ -88,9 +89,9 @@ class Tunnel:
         self.total_bandwidth = 0
         self.available_bandwidth = 0
 
-    def add_channels(self):
+    def add_channels(self, graph):
         for (src, dst) in zip(self.nodes[:-1], self.nodes[1:]):
-            self.channels.append(Edge(src, dst))
+            self.channels.append(Edge(src, dst, graph))
 
     def set_total_bandwidth (self):
         min_total_bandwidth = min(map ((lambda edge: edge.weight), self.channels))
@@ -134,7 +135,7 @@ class Utils:
         self.fg_id = 0
         self.flowgroups = []
 
-    def assign_flowgroup (self, applist):
+    def assign_flowgroup (self, graph, applist):
         for app in applist:
             flwg_assigned = False
             for flwg in self.flowgroups:
@@ -150,18 +151,18 @@ class Utils:
                 self.flowgroups.append(new_flwg)
 
         for flwg in self.flowgroups:
-            self.assign_tunnels(flwg)
+            self.assign_tunnels(graph, flwg)
 
     def get_flowgroups (self):
         return self.flowgroups
 
-    def assign_tunnels (self, flowG):
-        paths = nx.all_simple_paths(g, flowG.source, flowG.destination)
+    def assign_tunnels (self, graph, flowG):
+        paths = nx.all_simple_paths(graph, flowG.source, flowG.destination)
         FG_Tunnels = {}    
 
         for tunnel in paths:
             t = Tunnel(tunnel)
-            t.add_channels()
+            t.add_channels(graph)
             t.set_total_bandwidth()
             FG_Tunnels[t] = len(tunnel)
 
@@ -237,7 +238,7 @@ class B4_Max_Min_Fairshare:
 
 if __name__ == '__main__':
     util = Utils()
-    g = nx.Graph() # TODO: No global G
+    g = nx.Graph()
 
     nodeA = g.add_node('A')
     nodeB = g.add_node('B')
@@ -281,7 +282,7 @@ if __name__ == '__main__':
 
     applist = [app1, app2, app3]
 
-    util.assign_flowgroup(applist)
+    util.assign_flowgroup(g, applist)
     fg_list = util.get_flowgroups()
 
     b4_fairflow = B4_Max_Min_Fairshare()
