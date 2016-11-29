@@ -1,4 +1,5 @@
 import unittest
+import networkx as nx
 
 from flange.fairflow import *
 
@@ -36,11 +37,9 @@ def build_graph():
     util.assign_flowgroup(g, applist)
     fg_list = util.get_flowgroups()
 
-    #print ("edge data is %s" %(g.selfloop_edges()))
-
     return g
 
-class Test_fairflow(unittest.TestCase):
+class Test_fairflow_graph(unittest.TestCase):
 
     graph = build_graph()
 
@@ -134,6 +133,23 @@ class Test_fairflow(unittest.TestCase):
     def test_degreeF(self):
         self.assertEqual(self.graph.degree('F'), 3)
 
+    def test_tunnel1(self):
+        t1 = Tunnel(['A', 'B', 'D'])
+        t1.add_channels(self.graph)
+        t1.request_bandwidth(4)
+        self.assertEqual(min(map ((lambda edge: edge.weight), t1.channels)), 3)
+
+    def test_tunnel2(self):
+        t1 = Tunnel(['A', 'F', 'E', 'D'])
+        t1.add_channels(self.graph)
+        t1.request_bandwidth(6)
+        self.assertEqual(min(map ((lambda edge: edge.weight), t1.channels)), 0)
+
+    def test_tunnel3(self):
+        t1 = Tunnel(['B', 'C', 'D'])
+        t1.add_channels(self.graph)
+        allocated = t1.request_bandwidth(11)
+        self.assertEqual(allocated, 10)
 
 if __name__ == '__main__':
 
