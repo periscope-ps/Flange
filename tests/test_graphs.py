@@ -12,10 +12,52 @@ class Test_graph(unittest.TestCase):
         self.assertEqual(len(g.nodes()), 4)
         self.assertEqual(len(g.edges()), 6)
 
+    def test_linear_1(self):
+        g = graph(topology="linear", 
+                  nodes=["port1","port2","port3","port4","port5","port6"], 
+                  edges=[("port1", "port2", True), ("port2", "port3", True),("port3", "port4", True),("port4", "port5", True),("port5", "port6", True)])()
+        self.assertEqual(len(g.nodes()), 6)
+        self.assertEqual(len(g.edges()), 10)
+
+    def test_linear_2(self):
+        g = graph(topology="linear", 
+                  nodes=["port1","port2","port3","port4","port5","port6"], 
+                  edges=[("port1", "port2", False), ("port2", "port3", False),("port3", "port4", False),("port4", "port5", False),("port5", "port6", False)])()
+        self.assertEqual(len(g.nodes()), 6)
+        self.assertEqual(len(g.edges()), 5)
+
+    def test_linear_3(self):
+        g = graph(topology="linear", 
+                  nodes=["port1","port2","port3","port4","port5","port6"], 
+                  edges=[("port1", "port2", False), ("port2", "port3", True),("port3", "port4", False),("port4", "port5", True),("port5", "port6", False)])()
+        self.assertEqual(len(g.nodes()), 6)
+        self.assertEqual(len(g.edges()), 7)
+
     def test_ring(self):
         g = graph(topology="ring")()
         self.assertEqual(len(g.nodes()), 4)
         self.assertEqual(len(g.edges()), 4)
+
+    def test_ring_1(self):
+        g = graph(topology="ring",
+                  nodes=["port1","port2","port3","port4","port5"],
+                  edges=[("port1", "port2", True), ("port2", "port3", True),("port3", "port4", True),("port4", "port5", True),("port5", "port1", True)])()
+        self.assertEqual(len(g.nodes()), 5)
+        self.assertEqual(len(g.edges()), 10)
+
+    def test_ring_2(self):
+        g = graph(topology="ring",
+                  nodes=["port1","port2","port3","port4","port5"],
+                  edges=[("port1", "port2", True), ("port2", "port3", False),("port3", "port4", True),("port4", "port5", False),("port5", "port1", True)])()
+        self.assertEqual(len(g.nodes()), 5)
+        self.assertEqual(len(g.edges()), 8)
+
+    def test_ring_3(self):
+        g = graph(topology="ring",
+                  nodes=["port1","port2","port3"],
+                  edges=[("port1", "port2", True), ("port2", "port3", True),("port3", "port1", False)])()
+        self.assertEqual(len(g.nodes()), 3)
+        self.assertEqual(len(g.edges()), 5)
 
     def test_dynamic(self):
         g = graph(topology="dynamic")
@@ -26,6 +68,11 @@ class Test_graph(unittest.TestCase):
         self.assertEqual(len(g().nodes()), 6)
         self.assertEqual(len(g().nodes()), 3)
 
+    def test_dynamic_1(self):
+        g = graph(topology="dynamic",
+                  nodes=["p1", "p2"],
+                  edges=[])
+        self.assertEqual(len(g().nodes()), 2)
 
 #
 #class Test_unis(unittest.TestCase):
