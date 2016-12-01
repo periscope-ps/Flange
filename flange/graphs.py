@@ -53,12 +53,12 @@ class unis(FlangeTree):
 
 class graph(FlangeTree):
     linear = {"nodes": ["port1","port2","port3","port4"],
-              "edges": [("port1", "port2", True), ("port2", "port3", True),("port3", "port4", True)]}
+              "edges": [("port1", "port2"), ("port2", "port3"),("port3", "port4"),
+                        ("port2", "port1"), ("port3", "port2"),("port4", "port3")]}
 
     ring = {"nodes": ["port1", "port2", "port3", "port4"],
-            "edges": [("port1", "port2", False), ("port2", "port3", False),
-                      ("port3", "port4", False), ("port4", "port1", False)]}
-
+            "edges": [("port1", "port2"), ("port2", "port3"),
+                      ("port3", "port4"), ("port4", "port1")]}
 
     dynamic=[{"nodes": ["p1", "p2", "p3"], "edges": []},
              {"nodes": ["p1", "p2", "p3", "p4"], "edges": []},
@@ -66,12 +66,18 @@ class graph(FlangeTree):
              {"nodes": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
              {"nodes": ["p1", "p2", "p3", "p4", "p5", "p6"], "edges": []}]
 
+    ab_ring = {"nodes": ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3"],
+               "edges": [("A1", "A2"), ("A2", "A3"), ("A3", "B1"), 
+                        ("B1", "A4"), 
+                        ("A4", "B2"), ("B2", "B3"), ("B3", "A5"),
+                        ("A5", "A1")]}
+
     def __init__(self, topology="linear", nodes=None, edges=None):
         self.dynamic=0
 
         if nodes or edges:
             self.topology = {"nodes": nodes if nodes else [],
-                        "edges": edges if edges else []}
+                             "edges": edges if edges else []}
         else:
             try:
                 self.topology = graph.__getattribute__(graph, topology)
@@ -88,13 +94,9 @@ class graph(FlangeTree):
         except:
             topology = self.topology
 
-
-        for port in topology["nodes"]:
-            g.add_node(port, id=port)
-
-        for (src, sink, symmetric) in topology["edges"]:
-            g.add_edge(src, sink)
-            if symmetric: g.add_edge(sink, src)
+        nodes = [(name, {"id": name}) for name in topology["nodes"]]
+        g.add_nodes_from(nodes)
+        g.add_edges_from(topology["edges"])
 
         self.graph = g
         return self.graph
