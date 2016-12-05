@@ -1,7 +1,13 @@
 class FlangeTree(object):
+    """
+    Deferred/curried function as an object.
+    
+    The most common pattern is to pass a number of arguments at construction, 
+    and later invoke the whole function on a graph.
+    """
 
     def __call__(self, graph):
-        "Process the passed graph;"
+        "Process the passed graph"
         raise RuntimeError("Must override the call method")
 
     def focus(self, graph):
@@ -19,6 +25,21 @@ class FlangeTree(object):
         return lambda arg: other(self(arg))
 
 def autotree(*passed_args, **passed_kwargs):
+    """
+    Create a decorator that makes a FlangTree subclass from a function.
+    The resulting class will have same name as the source function.
+    The source function is used umodified, but its exectution context
+    will be as a member of a class. It should therefore probably have 'self' 
+    as its first argument.
+
+    *passed_args -- Names of required arguments to the generated 
+                    class constructor
+    **passed_kwargs -- Names and default values for optional arguments to 
+                    the generated class constructor
+
+    Note: There is now way to do *args or **kwargs at this time.
+    """
+
     def build_class(fn, name, passed_args, passed_kwargs):
         def init(self, *args, **kwargs):
             for (name, arg) in zip(passed_args, args):
@@ -29,7 +50,7 @@ def autotree(*passed_args, **passed_kwargs):
 
             for (name, val) in kwargs.items():
                 try:
-                    passed_kwargs[name]   #Raises exception if name not defined at decorator
+                    passed_kwargs[name]   #Raise exception if name not defined at decorator
                     self.__dict__[name] = val
                 except:
                     raise Exception("Unknown keyword argument passed: {0}".format(name))
