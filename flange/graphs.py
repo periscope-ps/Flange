@@ -1,7 +1,7 @@
 from unis.models import *
 from unis.runtime import Runtime
 import networkx as nx
-import itertools
+from itertools import chain
 from functools import reduce
 
 from ._internal import FlangeTree, autotree
@@ -52,31 +52,31 @@ class unis(FlangeTree):
 
 
 class graph(FlangeTree):
-    linear = {"nodes": ["port1","port2","port3","port4"],
+    linear = {"vertices": ["port1","port2","port3","port4"],
               "edges": [("port1", "port2"), ("port2", "port3"),("port3", "port4"),
                         ("port2", "port1"), ("port3", "port2"),("port4", "port3")]}
 
-    ring = {"nodes": ["port1", "port2", "port3", "port4"],
+    ring = {"vertices": ["port1", "port2", "port3", "port4"],
             "edges": [("port1", "port2"), ("port2", "port3"),
                       ("port3", "port4"), ("port4", "port1")]}
 
-    dynamic=[{"nodes": ["p1", "p2", "p3"], "edges": []},
-             {"nodes": ["p1", "p2", "p3", "p4"], "edges": []},
-             {"nodes": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
-             {"nodes": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
-             {"nodes": ["p1", "p2", "p3", "p4", "p5", "p6"], "edges": []}]
+    dynamic=[{"vertices": ["p1", "p2", "p3"], "edges": []},
+             {"vertices": ["p1", "p2", "p3", "p4"], "edges": []},
+             {"vertices": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
+             {"vertices": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
+             {"vertices": ["p1", "p2", "p3", "p4", "p5", "p6"], "edges": []}]
 
-    ab_ring = {"nodes": ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3"],
+    ab_ring = {"vertices": ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3"],
                "edges": [("A1", "A2"), ("A2", "A3"), ("A3", "B1"), 
                         ("B1", "A4"), 
                         ("A4", "B2"), ("B2", "B3"), ("B3", "A5"),
                         ("A5", "A1")]}
 
-    def __init__(self, topology="linear", nodes=None, edges=None):
+    def __init__(self, topology="linear", vertices=None, edges=None):
         self.dynamic=0
 
-        if nodes or edges:
-            self.topology = {"nodes": nodes if nodes else [],
+        if vertices or edges:
+            self.topology = {"vertices": vertices if vertices else [],
                              "edges": edges if edges else []}
         else:
             try:
@@ -86,18 +86,22 @@ class graph(FlangeTree):
 
 
     def __call__(self):
-        g = nx.DiGraph()
-
         try:
             topology = self.topology[self.dynamic]
             self.dynamic = (self.dynamic+1) % len(self.topology)
         except:
             topology = self.topology
 
-        nodes = [(name, {"id": name}) for name in topology["nodes"]]
-        g.add_nodes_from(nodes)
-        g.add_edges_from(topology["edges"])
+        vertices = [(name, {"id": name, "_type": "node"}) 
+                    for name in topology["vertices"]]
+        vertices.extend([(vertex, {"id": vertex, "_type": "link"}) 
+                         for vertex in topology["edges"]])
+        edges = [((src, (src,dst)), ((src,dst), dst)) 
+                 for (src, dst) in topology["edges"]]
 
+        g = nx.DiGraph()
+        g.add_nodes_from(vertices)
+        g.add_edges_from(chain(*edges))
         self.graph = g
         return self.graph
 
