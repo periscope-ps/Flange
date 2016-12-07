@@ -6,6 +6,7 @@ from functools import reduce
 
 from ._internal import FlangeTree, autotree
 
+
 class unis(FlangeTree):
     "Retrieves a graph from a UNIS server."
     default_unis = "http://192.168.100.200:8888"
@@ -72,6 +73,16 @@ class graph(FlangeTree):
                         ("A4", "B2"), ("B2", "B3"), ("B3", "A5"),
                         ("A5", "A1")]}
 
+    layers = {"vertices": ["Z1", "A1", "A2", "A3", "B1", "B2", "C1", "C2", "D1"],
+              "edges": [("Z1", "A1"), ("Z1", "A2"), ("Z1", "A3"),
+                        ("A1", "Z1"), ("A2", "Z1"), ("A3", "Z1"),
+                        ("A1", "B1"), ("A1", "B2"), ("A2", "B1"), ("A2", "B2"), ("A3", "B1"), ("A3", "B2"),
+                        ("B1", "A1"), ("B2", "A1"), ("B1", "A2"), ("B2", "A2"), ("B1", "A3"), ("B2", "A3"),
+                        ("B1", "C1"), ("B2", "C1"), ("B1", "C2"), ("B2", "C2"),
+                        ("C1", "B1"), ("C1", "B2"), ("C2", "B1"), ("C2", "B2"),
+                        ("C1", "D1"), ("C2", "D1"),
+                        ("D1", "C1"), ("D1", "C2")]}
+
     def __init__(self, topology="linear", vertices=None, edges=None):
         self.dynamic=0
 
@@ -100,6 +111,7 @@ class graph(FlangeTree):
                  for (src, dst) in topology["edges"]]
 
         g = nx.DiGraph()
+
         g.add_nodes_from(vertices)
         g.add_edges_from(chain(*edges))
         self.graph = g
