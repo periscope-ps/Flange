@@ -7,6 +7,16 @@ from functools import reduce
 from ._internal import FlangeTree, autotree
 
 
+# Flange uses vertex/edge to refer to graph items and node/link to refer to network things.
+# So we monkey patch in a vertices-named methods for all the graph classes
+nx.classes.Graph.vertices = lambda self: self.nodes()
+nx.classes.Graph.vertices_iter = lambda self: self.nodes_iter()
+nx.classes.Graph.has_vertex = lambda self, vertex: self.has_node(vertex)
+nx.classes.Graph.number_of_vertices = lambda self: self.number_of_nodes()
+nx.classes.Graph.vertices_with_self_loops = lambda self: self.nodes_with_self_loops()
+nx.classes.Graph.add_vertex = lambda self, vertex: self.add_node(vertex)
+nx.classes.Graph.add_vertices_from = lambda self, iterable: self.add_nodes_from(iterable)
+
 class unis(FlangeTree):
     "Retrieves a graph from a UNIS server."
     default_unis = "http://192.168.100.200:8888"
@@ -31,7 +41,7 @@ class unis(FlangeTree):
         g = nx.DiGraph() 
         for port in topology.ports:
             #HACK: Grabbing __dict__ probably won't work for long...
-            g.add_node(port.id, **port.__dict__) 
+            g.add_vertex(port.id, **port.__dict__) 
 
         for link in topology.links:
             if not link.directed:
@@ -112,7 +122,7 @@ class graph(FlangeTree):
 
         g = nx.DiGraph()
 
-        g.add_nodes_from(vertices)
+        g.add_vertices_from(vertices)
         g.add_edges_from(chain(*edges))
         self.graph = g
         return self.graph
@@ -140,53 +150,53 @@ class op(FlangeTree):
 
 @autotree("att_id", default=None)
 def att(self, graph):
-    def _att(self, graph, node_id):
+    def _att(self, graph, vertex_id):
         try:
-            return nx.get_node_attributes(graph, node_id)[self.att_id]
+            return nx.get_vertex_attributes(graph, vertex_id)[self.att_id]
         except:
             return self.default
         
-    return [self._att(graph, node_id) for node_id in graph.nodes()]
+    return [self._att(graph, vertex_id) for vertex_id in graph.vertices()]
 
 
 @autotree("predicate", label="*")
 def collect(self, graph):
-    """Gather nodes that pass a predcate into a hyper-node.
+    """Gather verteices that pass a predcate into a hyper-vertex.
     
-    predicate -- Return a list of node names to compress together
-    label -- Name for the node representing all combined nodes
+    predicate -- Return a list of vertex names to compress together
+    label -- Name for the vertex representing all combined vertices
     
-    TODO: Put edge data on to indicate the original node nodes
+    TODO: Put edge data on to indicate the original vertex vertices
     TODO: Deal with edge properties (are they copied?  aggregated? modified?)
     """
 
-    group_nodes = self.predicate(graph)
-    stable_nodes = [node for node in graph.nodes() if node not in group_nodes]
+    group_vertices = self.predicate(graph)
+    stable_vertices = [vertex for vertex in graph.vertices() if vertex not in group_vertices]
     
-    synth = graph.subgraph(stable_nodes)
-    synth.add_node(self.label)
+    synth = graph.subgraph(stable_vertices)
+    synth.add_vertex(self.label)
     
-    outbound = list(graph.out_edges_iter(group_nodes))
-    inbound = list(graph.in_edges_iter(group_nodes))
+    outbound = list(graph.out_edges_iter(group_vertices))
+    inbound = list(graph.in_edges_iter(group_vertices))
 
     for (start, end) in inbound:
         if not synth.has_edge(start, self.label) \
-            and start not in group_nodes:
+            and start not in group_vertices:
             synth.add_edge(start, self.label, **graph.get_edge_data(start, end))
 
     for (start, end) in outbound:
         if not synth.has_edge(self.label, end) \
-            and end not in group_nodes:
+            and end not in group_vertices:
             synth.add_edge(self.label, end, **graph.get_edge_data(start, end))
 
     return synth
 
 @autotree()
-def nodes(self, graph):
-    """Return the nodes of a graph.
-    TODO: Convert 'nodes' to an instance of something...so you can use it like 'nodes' instead of 'nodes()'
+def vertices(self, graph):
+    """Return the vertices of a graph.
+    TODO: Convert 'vertices' to an instance of something...so you can use it like 'vertices' instead of 'vertices()'
     """
-    return graph.nodes()
+    return graph.vertices()
 
 @autotree("val")
 def startswith(self, names):
