@@ -40,7 +40,7 @@ class TestGroupConditions(unittest.TestCase):
 
     def test_most_pass(self):
         t = most(lambda n, g: int(g.vertex[n]["id"][-1]) < 3,
-                 nodes())
+                 nodes)
         self.assertTrue(t(graph("linear")()))
 
     def test_most_fail(self):

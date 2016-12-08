@@ -1,6 +1,6 @@
 import unittest
 from flange.locations import *
-from flange.graphs import graph
+from flange.graphs import graph, nodes
 import flange
 
 class Test_across(unittest.TestCase):
@@ -32,5 +32,13 @@ class Test_near(unittest.TestCase):
     def test(self):
         g = graph()()
         target = g["port2"]
-        n = near(lambda x, g: True, lambda x,g: g[x] == target)(g)
-        self.assertIn(n, ["port1", "port3"])
+        n = near(nodes, lambda x,g: g[x] == target)(g)
+        self.assertEquals(len(n.vertices()), 1)
+        self.assertIn(n.vertices()[0], ["port1", "port3"])
+
+
+        g = graph()()
+        target = g["port4"]
+        n = near(nodes, lambda x,g: g[x] == target)(g)
+        self.assertEquals(len(n.vertices()), 1)
+        self.assertEquals(n.vertices()[0], "port3")

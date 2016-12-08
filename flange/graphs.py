@@ -187,15 +187,26 @@ def vertices(self, graph):
     """
     return graph.vertices()
 
-@autotree()
-def nodes(self, graph):
-    """Return a graph that only has the verticies that represent nodes.
-    TODO: Convert 'nodes' to an instance of something...so you can use it like 'vertices' instead of 'vertices()'
-    """
-    nodes = [v for v in graph.vertices() if graph.vertex[v]["_type"] == "node"]
-    return graph.subgraph(nodes)
-
 @autotree("val")
 def startswith(self, names):
     "Passed a list, returns all xs where x.startswith(val) is true."
     return [name for name in names if name.startswith(self.val)] 
+
+@autotree("att", "test")
+def all_att(self,  g): 
+    """
+    Return the subgraph containing only vertices with the given attribute/value pair.
+    Test is a function to evaluate with 
+
+    TODO: Generalize so the test can take a whole dictionary, not just a single attribute value
+    """
+
+    if callable(self.att):
+        verts = [v for v in g.vertices() if self.test(g.vertex[v][self.att])]
+    else:
+        verts = [v for v in g.vertices() if g.vertex[v][self.att] == self.test]
+
+    return g.subgraph(verts)
+
+nodes = all_att("_type", "node")  #Return a graph of just the nodes vertices
+links = all_att("_type", "link")  #Return a graph of just the link vertices 

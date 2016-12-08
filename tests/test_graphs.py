@@ -6,6 +6,14 @@ from unis.runtime import Runtime
 from flange.graphs import *
 import flange
 
+class Test_transforms(unittest.TestCase):
+    def test_nodes(self):
+        g = graph("ring")()
+        g2 = nodes(g)
+        self.assertEqual(len(g2.vertices()), len(graph.ring["vertices"]))
+    
+
+
 class Test_graph(unittest.TestCase):
     def test_linear(self):
         g = graph("linear")()
@@ -26,14 +34,6 @@ class Test_graph(unittest.TestCase):
         self.assertEqual(len(g().vertices()), 6)
         self.assertEqual(len(g().vertices()), 3)
 
-
-class Test_transforms(unittest.TestCase):
-    def test_nodes(self):
-        g = graph("ring")()
-        g2 = nodes()(g)
-        self.assertEqual(len(g2.vertices()), len(graph.ring["vertices"]))
-
-#
 #class Test_unis(unittest.TestCase):
 #    explicit_host = "http://192.168.100.200:8888"
 #

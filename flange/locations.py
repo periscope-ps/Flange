@@ -89,11 +89,10 @@ class near(FlangeTree):
 
     def __call__(self, graph):
         selector = lambda x: self.selector(x, graph)
-        criteria = lambda x: self.criteria(x, graph)
         sources = list(filter(selector, graph.vertices()))
 
         def path_weight(path):
-            # TODO: look up  weights in the graph
+            # TODO: look up  weights in the graph using vertex attributes
             return len(path)
 
         all_paths = {s:nx.shortest_path(graph, source=s) for s in sources}
@@ -101,15 +100,24 @@ class near(FlangeTree):
                        for (t, steps) in paths.items()]
 
         distances = [(path[-1], path_weight(path)) for path in paths if len(path) > 1]
-        valid = list(filter(criteria, distances))
+
+        def passes_criteria(path):
+            path_graph = graph.subgraph(path[-1])
+            return len(self.criteria(path_graph)) > 0  #Passes
+
+        valid = [(path, weight) 
+                 for (path, weight) in distances
+                 if passes_criteria(path)]
+        
         if len(valid) == 0: raise NoValidChoice()
 
         preferred = min(valid, key=lambda e: e[1])
-
-        return preferred[0]
+        return graph.subgraph(preferred[0][-1])
     
     def focus(self, graph):
         return self.selector(graph)
+    
+
 
 class across(FlangeTree):
     """Given a graph and a selector, returns a list of links that make up the min cut
