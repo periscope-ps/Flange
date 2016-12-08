@@ -187,6 +187,14 @@ def vertices(self, graph):
     """
     return graph.vertices()
 
+@autotree()
+def nodes(self, graph):
+    """Return a graph that only has the verticies that represent nodes.
+    TODO: Convert 'nodes' to an instance of something...so you can use it like 'vertices' instead of 'vertices()'
+    """
+    nodes = [v for v in graph.vertices() if graph.vertex[v]["_type"] == "node"]
+    return graph.subgraph(nodes)
+
 @autotree("val")
 def startswith(self, names):
     "Passed a list, returns all xs where x.startswith(val) is true."

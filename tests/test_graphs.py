@@ -8,7 +8,7 @@ import flange
 
 class Test_graph(unittest.TestCase):
     def test_linear(self):
-        g = graph()()
+        g = graph("linear")()
         self.assertEqual(len(g.vertices()), 10)
         self.assertEqual(len(g.edges()), 12)
 
@@ -26,6 +26,12 @@ class Test_graph(unittest.TestCase):
         self.assertEqual(len(g().vertices()), 6)
         self.assertEqual(len(g().vertices()), 3)
 
+
+class Test_transforms(unittest.TestCase):
+    def test_nodes(self):
+        g = graph("ring")()
+        g2 = nodes()(g)
+        self.assertEqual(len(g2.vertices()), len(graph.ring["vertices"]))
 
 #
 #class Test_unis(unittest.TestCase):
