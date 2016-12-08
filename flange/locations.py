@@ -111,7 +111,7 @@ class near(FlangeTree):
     def focus(self, graph):
         return self.selector(graph)
 
-class inside(FlangeTree):
+class across(FlangeTree):
     """Given a graph and a selector, returns a list of links that make up the min cut
     
     TODO: Graph must have a clear "side-id-ness" to it to work...  

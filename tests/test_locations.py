@@ -3,10 +3,10 @@ from flange.locations import *
 from flange.graphs import graph
 import flange
 
-class Test_inside(unittest.TestCase):
+class Test_across(unittest.TestCase):
     def test(self):
         g = graph("ring")
-        i = inside(lambda x,g: int(g.vertex[x]["id"][-1]) < 3)(g())
+        i = across(lambda x,g: int(g.vertex[x]["id"][-1]) < 3)(g())
         r = {(e[0], e[1]) for e in i}
         self.assertEqual(r, {("port1", "port2")})
 
