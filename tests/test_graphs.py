@@ -9,22 +9,22 @@ import flange
 class Test_graph(unittest.TestCase):
     def test_linear(self):
         g = graph()()
-        self.assertEqual(len(g.nodes()), 4)
-        self.assertEqual(len(g.edges()), 6)
+        self.assertEqual(len(g.vertices()), 10)
+        self.assertEqual(len(g.edges()), 12)
 
     def test_ring(self):
         g = graph(topology="ring")()
-        self.assertEqual(len(g.nodes()), 4)
-        self.assertEqual(len(g.edges()), 4)
+        self.assertEqual(len(g.vertices()), 8)
+        self.assertEqual(len(g.edges()), 8)
 
     def test_dynamic(self):
         g = graph(topology="dynamic")
-        self.assertEqual(len(g().nodes()), 3)
-        self.assertEqual(len(g().nodes()), 4)
-        self.assertEqual(len(g().nodes()), 5)
-        self.assertEqual(len(g().nodes()), 5)
-        self.assertEqual(len(g().nodes()), 6)
-        self.assertEqual(len(g().nodes()), 3)
+        self.assertEqual(len(g().vertices()), 3)
+        self.assertEqual(len(g().vertices()), 4)
+        self.assertEqual(len(g().vertices()), 5)
+        self.assertEqual(len(g().vertices()), 5)
+        self.assertEqual(len(g().vertices()), 6)
+        self.assertEqual(len(g().vertices()), 3)
 
 
 #
@@ -58,23 +58,23 @@ class Test_graph(unittest.TestCase):
 #    def test_implict_host(self):
 #        b = unis()
 #        g = b()
-#        self.assertEqual(len(g.nodes()), 2)
+#        self.assertEqual(len(g.vertices()), 2)
 #        self.assertEqual(len(g.edges()), 1)
 #
 #    def test_all_implicit(self):
 #        b = unis(source=self.explicit_host)
 #        g = b()
-#        self.assertEqual(len(g.nodes()), 2)
+#        self.assertEqual(len(g.vertices()), 2)
 #        self.assertEqual(len(g.edges()), 1)
 #
 #    def test_all_explicit(self):
 #        b = unis("*", self.explicit_host)
 #        g = b()
-#        self.assertEqual(len(g.nodes()), 2)
+#        self.assertEqual(len(g.vertices()), 2)
 #        self.assertEqual(len(g.edges()), 1)
 #
 #    def test_named(self):
 #        b = unis("test", self.explicit_host)
 #        g = b()
-#        self.assertEqual(len(g.nodes()), 2)
+#        self.assertEqual(len(g.vertices()), 2)
 #        self.assertEqual(len(g.edges()), 1)

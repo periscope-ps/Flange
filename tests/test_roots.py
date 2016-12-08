@@ -57,7 +57,7 @@ class Test_monitor(unittest.TestCase):
 
     def test_node_gate(self):
         root = lambda g: 1
-        gate = lambda g: len(g.nodes())
+        gate = lambda g: len(g.vertices())
         self.execute(root, gate, 4, 1)
 
     def execute(self, root, gate, expected_execs, expected_skips):
