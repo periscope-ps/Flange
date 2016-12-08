@@ -59,17 +59,18 @@ class on(FlangeTree):
         return self.selector(graph)
 
 class around(FlangeTree):
-    """Given a graph and a selector, returns a list of links that go in or out of the 
-    selected vertices"""
+    """Given a graph and a selector, returns a subgraph that is just the link vertices
+    that go in to or out of the selected (probably node) vertices.
+    """
     def __init__(self, selector):
         self.selector = selector
 
     def __call__(self, graph):
-        selector = lambda x: self.selector(x,graph)
-        vertices = list(filter(selector, graph.vertices())) ## TODO -- More complex query here
-        outbound = graph.edges_iter(vertices)
-        inbound = graph.edges_iter(vertices)
-        return set(itertools.chain(outbound, inbound))
+        selected = self.selector(graph)
+        
+        outbound = itertools.chain(*[graph.successors(v) for v in selected.vertices()])
+        inbound = itertools.chain(*[graph.predecessors(v) for v in selected.vertices()])
+        return graph.subgraph(itertools.chain(inbound, outbound))
     
     def focus(self, graph):
         return self.selector(graph)

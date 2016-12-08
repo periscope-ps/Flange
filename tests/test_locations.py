@@ -24,9 +24,10 @@ class Test_place(unittest.TestCase):
 
 class Test_around(unittest.TestCase):
     def test(self):
-        i = around(lambda x, g: g.vertex[x]["id"] == "port1")(graph()())
-        r = {(e[0], e[1]) for e in i}
-        self.assertEqual(r, {("port1", "port2")})
+        g = graph("linear")
+        s = lambda g: g.subgraph("port1")
+        i = around(s)(g())
+        self.assertEqual(set(i.vertices()), {('port2', 'port1'), ('port1', 'port2')})
 
 class Test_near(unittest.TestCase):
     def test(self):
