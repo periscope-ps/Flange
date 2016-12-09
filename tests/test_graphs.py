@@ -13,6 +13,12 @@ class Test_transforms(unittest.TestCase):
         self.assertEqual(len(g2.vertices()), len(graph.ring["vertices"]))
     
 
+    def test_all_att(self):
+        g = graph("ring")
+        t = nodes >> all_att("id", lambda id: int(id[-1]) < 3)
+        g2 = t(g())
+        self.assertEqual({'port1', 'port2'}, set(g2.vertices()))
+
 
 class Test_graph(unittest.TestCase):
     def test_linear(self):

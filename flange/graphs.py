@@ -201,7 +201,7 @@ def all_att(self,  g):
     TODO: Generalize so the test can take a whole dictionary, not just a single attribute value
     """
 
-    if callable(self.att):
+    if callable(self.test):
         verts = [v for v in g.vertices() if self.test(g.vertex[v][self.att])]
     else:
         verts = [v for v in g.vertices() if g.vertex[v][self.att] == self.test]
