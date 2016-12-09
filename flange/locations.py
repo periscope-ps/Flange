@@ -2,6 +2,7 @@ import networkx as nx
 import itertools
 from ._internal import FlangeTree
 from .errors import NoValidChoice
+from .graphs import islink
 
 class between(FlangeTree):
     def __init__(self, criteria, src_selector, dst_selector):
@@ -116,47 +117,63 @@ class near(FlangeTree):
         return self.selector(graph)
     
 
-
 class across(FlangeTree):
     """Given a graph and a selector, returns a list of links that make up the min cut
-    
-    TODO: Graph must have a clear "side-id-ness" to it to work...  
-          ###Source and ###Sink cannot both link to the same vertex.
+
+    src_selector -- Source nodes for the flow
+    dst_selector -- Destination nodes for the flow
+              
+    TODO: Use real link capacity figures (from the graph...)
+    TODO: Auto-generate capacity (the hard-coded 10 is a HORRIBLE default)
     """
-    def __init__(self, selector):
-        self.selector=selector
+    def __init__(self, src_selector, dst_selector, capacity=10):
+        self.src_selector = src_selector
+        self.dst_selector = dst_selector
+        self.capacity=capacity
 
     def __call__(self, graph):
-        selector = lambda x: self.selector(x, graph)
-        vertices = list(filter(selector, graph.vertices())) ## TODO -- More complex query here
-        synth = graph.subgraph(vertices) ## Get the subgraph indicated by the selector
+        sources = self.src_selector(graph)
+        dests = self.dst_selector(graph)
+        
+        if len(sources) == 0 or len(dests) == 0:
+            raise NoValidChoice("Source or destination set is empty")
+            
+        if not set(sources.vertices()).isdisjoint(set(dests.vertices())):
+            raise NoValidChoice("Source and Sink verticies are NOT disjoint, cannot find cut across")
+            
+        synth = graph.copy()
         nx.set_edge_attributes(synth, 'capacity', 1)
 
-        outbound = list(graph.out_edges_iter(vertices))
-        inbound = list(graph.in_edges_iter(vertices))
+        src = sources.vertices()[0]
+        if len(sources) > 1:
+            src = "##SOURCE##"
+            synth.add_vertex(src)
+            for v in sources:
+                synth.add_edge(src, v, capacity=self.capacity)  
+                
 
-        src = "##SOURCE##"
-        synth.add_vertex(src)
-        for edge in inbound:
-            if not synth.has_edge(*edge):
-                synth.add_edge(src, edge[1], capacity=10)
-
-        sink = "##SINK##"
-        synth.add_vertex(sink)
-        for edge in outbound:
-            if not synth.has_edge(*edge):
-                synth.add_edge(edge[0], sink, capacity=10)
-
+        sink = dests.vertices()[0]
+        if len(dests) > 1:
+            sink = "##SINK##"
+            synth.add_vertex(sink)
+            for v in dests:
+                synth.add_edge(v, sink, capacity=self.capacity)  
+            
         cut_value, partition = nx.minimum_cut(synth, s=src, t=sink, capacity='capacity')
-        reachable, non_reachable = partition
-
-        cutset = set()
-        for u, nbrs in ((n, synth[n]) for n in reachable):
-            cutset.update((u, v) for v in nbrs if v in non_reachable)
-            cut_value == sum(synth.edge[u][v]['capacity'] for (u, v) in cutset)
-
-
-        return cutset
+        side_a, side_b = partition
+        
+        links = [v for v in side_a if islink(v, graph)]
+        if len(links) == 0:
+            swap = side_a
+            side_a = side_b
+            side_b = swap
+            links = [v for v in side_a if islink(v)]
+            
+        cutset = [v for v in links 
+                  if (v[0] in side_a and v[1] in side_b) \
+                      or (v[0] in side_b and v[1] in side_a)]
+        
+        return graph.subgraph(cutset)
 
     def focus(self, graph):
         return self.selector(graph)
