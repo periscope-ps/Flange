@@ -35,12 +35,12 @@ class Test_near(unittest.TestCase):
         g = graph()()
         target = g["port2"]
         n = near(nodes, lambda x,g: g[x] == target)(g)
-        self.assertEquals(len(n.vertices()), 1)
+        self.assertEqual(len(n.vertices()), 1)
         self.assertIn(n.vertices()[0], ["port1", "port3"])
 
 
         g = graph()()
         target = g["port4"]
         n = near(nodes, lambda x,g: g[x] == target)(g)
-        self.assertEquals(len(n.vertices()), 1)
-        self.assertEquals(n.vertices()[0], "port3")
+        self.assertEqual(len(n.vertices()), 1)
+        self.assertEqual(n.vertices()[0], "port3")
