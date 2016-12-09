@@ -227,13 +227,10 @@ def neighbors(self, graph):
     outbound = chain(*[graph.successors(v) for v in selected.vertices()])
     inbound = chain(*[graph.predecessors(v) for v in selected.vertices()])
     
-    def all_edges(v, g):
-        return list(chain(g.out_edges(v), g.in_edges(v)))
-    
     subgraph = graph.subgraph(chain(inbound, outbound, selected.vertices()))
     if not self.external:
         vertices = [v for v in subgraph.vertices() 
-                    if subgraph.vertex[v]["_type"] == "node" \
+                    if isnode(v, subgraph)
                        or len(all_edges(v, subgraph)) > 1]
         subgraph = graph.subgraph(vertices)
         
@@ -242,3 +239,22 @@ def neighbors(self, graph):
 
 nodes = all_att("_type", "node")  #Return a graph of just the nodes vertices
 links = all_att("_type", "link")  #Return a graph of just the link vertices 
+
+
+def islink(v, g):
+    "Convenience methods to check if a vertex represents a network node"
+    try:
+        return g.vertex[v]["_type"] == "link"
+    except:
+        return False
+
+def isnode(v, g):
+    "Convenience methods to check if a vertex represents a network node"
+    try:
+        return g.vertex[v]["_type"] == "node"
+    except:
+        return False
+
+def all_edges(v, g):
+    "Convenience method to get inbound and outbound edges related to a vertex"
+    return list(chain(g.out_edges(v), g.in_edges(v)))
