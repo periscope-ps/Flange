@@ -9,5 +9,6 @@ def place(self, graph):
     "Put information at a specific place on the graph"
 
     position = self.at(graph)
-    g2 = self.mod(position, graph)
+    g2 = self.mod(position)
     return g2
+
