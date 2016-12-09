@@ -208,5 +208,37 @@ def all_att(self,  g):
 
     return g.subgraph(verts)
 
+
+@autotree("op", external=True)
+def neighbors(self, graph):
+    """Executes the op on the graph, then re-inserts the node or link 
+    verticies from the original graph and related edges.  
+
+    This makes it easy to (for example) filter to nodes with a given name
+    while keeping the connectivity information.
+
+    op -- Operation to select verticies with
+    external -- Keep link-verticies with only one connection in the subgraph?
+                Such verticies point to some node that is *external* to the subgraph,
+                thus the name.  Default is true.
+    """
+
+    selected = self.op(graph)
+    outbound = chain(*[graph.successors(v) for v in selected.vertices()])
+    inbound = chain(*[graph.predecessors(v) for v in selected.vertices()])
+    
+    def all_edges(v, g):
+        return list(chain(g.out_edges(v), g.in_edges(v)))
+    
+    subgraph = graph.subgraph(chain(inbound, outbound, selected.vertices()))
+    if not self.external:
+        vertices = [v for v in subgraph.vertices() 
+                    if subgraph.vertex[v]["_type"] == "node" \
+                       or len(all_edges(v, subgraph)) > 1]
+        subgraph = graph.subgraph(vertices)
+        
+    return subgraph
+
+
 nodes = all_att("_type", "node")  #Return a graph of just the nodes vertices
 links = all_att("_type", "link")  #Return a graph of just the link vertices 

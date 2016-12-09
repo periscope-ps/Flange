@@ -12,12 +12,28 @@ class Test_transforms(unittest.TestCase):
         g2 = nodes(g)
         self.assertEqual(len(g2.vertices()), len(graph.ring["vertices"]))
     
-
     def test_all_att(self):
         g = graph("ring")
         t = nodes >> all_att("id", lambda id: int(id[-1]) < 3)
         g2 = t(g())
         self.assertEqual({'port1', 'port2'}, set(g2.vertices()))
+
+
+    def test_neighbors(self):
+        g = graph("layers")
+        selector = selector = nodes >> all_att("id", lambda id: int(id[-1]) == 1)
+        transform = neighbors(selector)
+        g2 = transform(g())
+        self.assertEqual(29, len(g2.vertices()))
+        self.assertIn("A1", g2.vertices())
+        self.assertIn("B1", g2.vertices())
+        self.assertIn("C1", g2.vertices())
+        self.assertIn("Z1", g2.vertices())
+        self.assertTrue(nx.is_weakly_connected(g2)) #Not true for all neighbors graphs, but is true for the layers one
+
+        transform = neighbors(selector, external=False)
+        g2 = transform(g())
+        self.assertEqual(13, len(g2.vertices()))
 
 
 class Test_graph(unittest.TestCase):
