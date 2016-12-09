@@ -1,7 +1,6 @@
 import unittest
 from flange.locations import *
-from flange.graphs import graph, nodes, all_att, neighbors
-import flange
+from flange.graphs import * 
 
 class Test_across(unittest.TestCase):
     def test(self):
@@ -19,12 +18,6 @@ class Test_on(unittest.TestCase):
         g = graph("linear")
         g2 = on(selector)(g())
         self.assertEqual({"port1", "port2"}, set(g2.vertices()))
-
-class Test_place(unittest.TestCase):
-    def test_placement(self):
-        p = flange.place(lambda positions, g: {g.vertex[n]["id"]: "modified" for n in positions},
-                  on(lambda x,g: int(g.vertex[x]["id"][-1]) < 3))
-        self.assertEqual(p(graph()()), {"port1": "modified", "port2": "modified"})
 
 class Test_around(unittest.TestCase):
     def test(self):
@@ -46,3 +39,11 @@ class Test_near(unittest.TestCase):
         n = near(nodes, lambda x,g: g[x] == target)(g)
         self.assertEqual(len(n.vertices()), 1)
         self.assertEqual(n.vertices()[0], "port3")
+
+class Test_bewteen(unittest.TestCase):
+    def test(self):
+        g = graph("linear")
+        g2 = between(sub("port2"), sub("port4"))(g())
+
+        self.assertEqual(3, len(g2.vertices()))
+        self.assertEqual("port3", nodes(g2).vertices()[0])

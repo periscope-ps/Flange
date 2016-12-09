@@ -5,10 +5,10 @@ from .errors import NoValidChoice
 from .graphs import islink
 
 class between(FlangeTree):
-    def __init__(self, criteria, src_selector, dst_selector):
-        self.criteria = criteria
+    def __init__(self, src_selector, dst_selector, criteria=lambda x: 0):
         self.src_selector = src_selector
         self.dst_selector = dst_selector
+        self.criteria = criteria
 
     def __call__(self, graph):
         """Finds a path bewteen the source and target selector where each hop
@@ -22,20 +22,17 @@ class between(FlangeTree):
         """
 
         paths = self.focus(graph)
-        ranked = sorted(paths, self.criteria)
-        
+        ranked = sorted(paths, key=self.criteria)
         try:
-            return ranked[0] 
+            return graph.subgraph(ranked[0][1:-1])
         except IndexError:
             raise NoValidChoice("No paths found from selected source/target vertex/vertices", )
 
 
     def focus(self, graph):
-        try:
-            s = next(filter(self.src_selector, graph.vertices()))
-            t = next(filter(self.dst_selector, graph.vertices()))
-        except StopIteration:
-            raise NoValidChoice("Source or target set empty")
+        #TODO: Extend to multiple source/targets
+        s = self.src_selector(graph).vertices()[0]
+        t = self.dst_selector(graph).vertices()[0]
 
         allpaths = nx.all_simple_paths(graph, s, t)
 
@@ -125,6 +122,7 @@ class across(FlangeTree):
               
     TODO: Use real link capacity figures (from the graph...)
     TODO: Auto-generate capacity (the hard-coded 10 is a HORRIBLE default)
+    TODO: Is there a variant the returns nodes instead of links?  Does that make sense?
     """
     def __init__(self, src_selector, dst_selector, capacity=10):
         self.src_selector = src_selector
