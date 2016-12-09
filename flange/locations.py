@@ -42,16 +42,13 @@ class between(FlangeTree):
 
 
 class on(FlangeTree):
-    """Returns a subgraph defined by the selector.  
-    The implication is that all items in the subgraph will be modified
-    """
+    "Returns a subgraph defined by the selector."
 
     def __init__(self, selector):
         self.selector = selector
 
     def __call__(self, graph):
-        selector = lambda x: self.selector(x, graph)
-        vertices = list(filter(selector, graph.vertices()))
+        vertices = self.selector(graph)
         synth = graph.subgraph(vertices)
         return synth
 

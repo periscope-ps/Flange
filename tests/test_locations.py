@@ -1,6 +1,6 @@
 import unittest
 from flange.locations import *
-from flange.graphs import graph, nodes
+from flange.graphs import graph, nodes, all_att
 import flange
 
 class Test_across(unittest.TestCase):
@@ -12,9 +12,10 @@ class Test_across(unittest.TestCase):
 
 class Test_on(unittest.TestCase):
     def test(self):
-        o = on(lambda x,g: int(g.vertex[x]["id"][-1]) < 3)(graph()())
-        self.assertEqual({"port1", "port2"}, set(o.vertices()))
-        self.assertEqual(2, len(o.edges()))
+        selector =  nodes >> all_att("id", lambda id: int(id[-1]) < 3)
+        g = graph("linear")
+        g2 = on(selector)(g())
+        self.assertEqual({"port1", "port2"}, set(g2.vertices()))
 
 class Test_place(unittest.TestCase):
     def test_placement(self):
