@@ -11,7 +11,36 @@ class Test_transforms(unittest.TestCase):
         g = graph("ring")()
         g2 = nodes(g)
         self.assertEqual(len(g2.vertices()), len(graph.ring["vertices"]))
-    
+
+    def test_set_att(self):
+        g = graph("linear")()
+        t = set_att("firewall", True)
+
+        #Not in-place test
+        for v in g.vertices():
+            self.assertFalse(g.vertex[v].get("firewall", False))
+        g2 = t(g)
+        self.assertIsNot(g, g2)
+        for v in g.vertices():
+            self.assertTrue(g2.vertex[v].get("firewall", False))
+
+        #In-place test 
+        for v in g.vertices():
+            self.assertFalse(g.vertex[v].get("firewall", False))
+        g2 = t(g, inplace=True)
+
+        self.assertIs(g, g2)
+        for v in g.vertices():
+            self.assertTrue(g2.vertex[v].get("firewall", False))
+
+    def test_subgraph(self):
+        g = graph("layers")()
+        t = sub("A1")
+        self.assertEqual(1, len(t(g)))
+
+        t = sub(lambda x: int(x[-1]) == 1)
+        self.assertEqual(5, len(t(nodes(g))))
+
     def test_all_att(self):
         g = graph("ring")
         t = nodes >> all_att("id", lambda id: int(id[-1]) < 3)

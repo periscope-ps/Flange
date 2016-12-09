@@ -258,3 +258,27 @@ def isnode(v, g):
 def all_edges(v, g):
     "Convenience method to get inbound and outbound edges related to a vertex"
     return list(chain(g.out_edges(v), g.in_edges(v)))
+
+@autotree("att", "val")
+def set_att(self, graph, inplace=False):
+    """Set an attribute on all vertices in a graph,
+
+    att -- attribute to set
+    val -- value to set to
+    inplace -- Set true to mutate graph (otherwise makes a copy). Default is False.
+    """
+    g = graph.copy() if not inplace else graph
+    nx.set_node_attributes(g, self.att, self.val)
+    return g
+
+@autotree("predicate")
+def sub(self, graph):
+    "TODO: Extend predicate to include lists and test with 'in'"
+    if callable(self.predicate):
+        vertices = [v for v in graph.vertices()
+                    if self.predicate(v)]
+    else:
+        vertices = self.predicate
+
+    return graph.subgraph(vertices)
+
