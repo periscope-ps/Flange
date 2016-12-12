@@ -269,7 +269,7 @@ def all_edges(v, g):
     return list(chain(g.out_edges(v), g.in_edges(v)))
 
 @autotree("att", "val")
-def set_att(self, graph, inplace=False):
+def set_att(self, graph, *, inplace=False):
     """Set an attribute on all vertices in a graph,
 
     att -- attribute to set
