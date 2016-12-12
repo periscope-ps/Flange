@@ -7,7 +7,7 @@ from flange.graphs import *
 import flange
 
 class Test_transforms(unittest.TestCase):
-    def test_nodes(self):
+    def test_vertices(self):
         g = graph("ring")()
         g2 = nodes(g)
         self.assertEqual(len(g2.vertices()), len(graph.ring["vertices"]))
@@ -50,7 +50,7 @@ class Test_transforms(unittest.TestCase):
 
     def test_neighbors(self):
         g = graph("layers")
-        selector = selector = nodes >> all_att("id", lambda id: int(id[-1]) == 1)
+        selector = nodes >> all_att("id", lambda id: int(id[-1]) == 1)
         transform = neighbors(selector)
         g2 = transform(g())
         self.assertEqual(29, len(g2.vertices()))
@@ -84,6 +84,17 @@ class Test_graph(unittest.TestCase):
         self.assertEqual(len(g().vertices()), 5)
         self.assertEqual(len(g().vertices()), 6)
         self.assertEqual(len(g().vertices()), 3)
+
+    def test_manual(self):
+        g = graph(vertices=["port1","port2","port3","port4","port5","port6"], 
+                  edges=[("port1", "port2"), ("port2", "port1"),
+                         ("port2", "port3"), ("port3", "port2"),
+                         ("port3", "port4"), ("port4", "port3"),
+                         ("port4", "port5"), ("port5", "port4"),
+                         ("port5", "port6"), ("port6", "port5")])()
+        self.assertEqual(len(g.vertices()), 16)
+        self.assertEqual(len(g.edges()), 20)
+
 
 #class Test_unis(unittest.TestCase):
 #    explicit_host = "http://192.168.100.200:8888"

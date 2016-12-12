@@ -37,13 +37,20 @@ def autotree(*passed_args, **passed_kwargs):
     **passed_kwargs -- Names and default values for optional arguments to 
                     the generated class constructor
 
-    Note: There is now way to do *args or **kwargs at this time.
+    Note: There is no way to do *args or **kwargs at this time.
     """
 
-    def build_class(fn, name, passed_args, passed_kwargs):
+    def build_class(call, name, passed_args, passed_kwargs):
         def init(self, *args, **kwargs):
             for (name, arg) in zip(passed_args, args):
                 self.__dict__[name] = arg
+
+            # Handle *args
+            if len(args) > len(passed_args) \
+                 and len(passed_args) > 0 \
+                 and passed_args[-1].beginswith("*") \
+                 and not passed_args[-1].beginswith("**"):
+                     self.__dict__[name[1:]] = args[len(passed_args):]
 
             for (name, val) in passed_kwargs.items():
                 self.__dict__[name] = val
@@ -55,9 +62,8 @@ def autotree(*passed_args, **passed_kwargs):
                 except:
                     raise Exception("Unknown keyword argument passed: {0}".format(name))
 
-                    
         body_dict = {"__init__": init,
-                     "__call__": fn}
+                     "__call__": call}
 
         cls = type(name, (FlangeTree,), body_dict)
         return cls
