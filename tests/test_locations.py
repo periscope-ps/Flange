@@ -27,18 +27,20 @@ class Test_around(unittest.TestCase):
         self.assertEqual(set(i.vertices()), {('port2', 'port1'), ('port1', 'port2')})
 
 class Test_near(unittest.TestCase):
-    def test(self):
-        g = graph()()
+    def test_middle(self):
+        g = graph("linear")()
         target = g["port2"]
         n = near(nodes, lambda x,g: g[x] == target)(g)
         self.assertEqual(len(n.vertices()), 1)
         self.assertIn(n.vertices()[0], ["port1", "port3"])
 
-        g = graph()()
+    def test_spur(self):
+        g = graph("linear")()
         target = g["port4"]
         n = near(nodes, lambda x,g: g[x] == target)(g)
         self.assertEqual(len(n.vertices()), 1)
         self.assertEqual(n.vertices()[0], "port3")
+
 
 class Test_bewteen(unittest.TestCase):
     def test(self):

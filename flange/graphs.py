@@ -82,16 +82,25 @@ class graph(FlangeTree):
                         ("C1", "D1"), ("C2", "D1"),
                         ("D1", "C1"), ("D1", "C2")]}
 
-    def __init__(self, topology="linear", vertices=None, edges=None):
+    def __init__(self, topology=None, *, vertices=None, edges=None):
         self.dynamic=0
 
+        if topology is not None \
+           and (vertices is not None
+                or edges is not None):
+            raise ValueError("Specify topology OR nodes & edges.  Not both.")
+
+        if nodes is not None\
+           or edges is not None:
+            self.topology = {"nodes": nodes if nodes else [],
+                             "edges": edges if edges else []}
         if vertices or edges:
             self.topology = {"vertices": vertices if vertices else [],
                              "edges": edges if edges else []}
         else:
             try:
                 self.topology = graph.__getattribute__(graph, topology)
-            except AttributeError as e:
+            except (AttributeError, TypeError) as e:
                 raise ValueError("No pre-defined graph with name '{0}'".format(topology)) from None
 
 
