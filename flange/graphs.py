@@ -1,8 +1,10 @@
 from unis.models import *
 from unis.runtime import Runtime
 import networkx as nx
+from itertools import chain
+from functools import reduce
 
-from ._internal import FlangeTree
+from ._internal import FlangeTree, autotree
 
 class unis(FlangeTree):
     "Retrieves a graph from a UNIS server."
@@ -28,7 +30,7 @@ class unis(FlangeTree):
         g = nx.DiGraph() 
         for port in topology.ports:
             #HACK: Grabbing __dict__ probably won't work for long...
-            g.add_node(port.id, **port.__dict__) 
+            g.add_vertex(port.id, **port.__dict__) 
 
         for link in topology.links:
             if not link.directed:
@@ -50,26 +52,42 @@ class unis(FlangeTree):
 
 
 class graph(FlangeTree):
-    linear = {"nodes": ["port1","port2","port3","port4"],
-              "edges": [("port1", "port2", True), ("port2", "port3", True),("port3", "port4", True)]}
+    linear = {"vertices": ["port1","port2","port3","port4"],
+              "edges": [("port1", "port2"), ("port2", "port3"),("port3", "port4"),
+                        ("port2", "port1"), ("port3", "port2"),("port4", "port3")]}
 
-    ring = {"nodes": ["port1", "port2", "port3", "port4"],
-            "edges": [("port1", "port2", False), ("port2", "port3", False),
-                      ("port3", "port4", False), ("port4", "port1", False)]}
+    ring = {"vertices": ["port1", "port2", "port3", "port4"],
+            "edges": [("port1", "port2"), ("port2", "port3"),
+                      ("port3", "port4"), ("port4", "port1")]}
 
+    dynamic=[{"vertices": ["p1", "p2", "p3"], "edges": []},
+             {"vertices": ["p1", "p2", "p3", "p4"], "edges": []},
+             {"vertices": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
+             {"vertices": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
+             {"vertices": ["p1", "p2", "p3", "p4", "p5", "p6"], "edges": []}]
 
-    dynamic=[{"nodes": ["p1", "p2", "p3"], "edges": []},
-             {"nodes": ["p1", "p2", "p3", "p4"], "edges": []},
-             {"nodes": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
-             {"nodes": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
-             {"nodes": ["p1", "p2", "p3", "p4", "p5", "p6"], "edges": []}]
+    ab_ring = {"vertices": ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3"],
+               "edges": [("A1", "A2"), ("A2", "A3"), ("A3", "B1"), 
+                        ("B1", "A4"), 
+                        ("A4", "B2"), ("B2", "B3"), ("B3", "A5"),
+                        ("A5", "A1")]}
 
-    def __init__(self, topology="linear", nodes=None, edges=None):
+    layers = {"vertices": ["Z1", "A1", "A2", "A3", "B1", "B2", "C1", "C2", "D1"],
+              "edges": [("Z1", "A1"), ("Z1", "A2"), ("Z1", "A3"),
+                        ("A1", "Z1"), ("A2", "Z1"), ("A3", "Z1"),
+                        ("A1", "B1"), ("A1", "B2"), ("A2", "B1"), ("A2", "B2"), ("A3", "B1"), ("A3", "B2"),
+                        ("B1", "A1"), ("B2", "A1"), ("B1", "A2"), ("B2", "A2"), ("B1", "A3"), ("B2", "A3"),
+                        ("B1", "C1"), ("B2", "C1"), ("B1", "C2"), ("B2", "C2"),
+                        ("C1", "B1"), ("C1", "B2"), ("C2", "B1"), ("C2", "B2"),
+                        ("C1", "D1"), ("C2", "D1"),
+                        ("D1", "C1"), ("D1", "C2")]}
+
+    def __init__(self, topology="linear", vertices=None, edges=None):
         self.dynamic=0
 
-        if nodes or edges:
-            self.topology = {"nodes": nodes if nodes else [],
-                        "edges": edges if edges else []}
+        if vertices or edges:
+            self.topology = {"vertices": vertices if vertices else [],
+                             "edges": edges if edges else []}
         else:
             try:
                 self.topology = graph.__getattribute__(graph, topology)
@@ -78,22 +96,23 @@ class graph(FlangeTree):
 
 
     def __call__(self):
-        g = nx.DiGraph()
-
         try:
             topology = self.topology[self.dynamic]
             self.dynamic = (self.dynamic+1) % len(self.topology)
         except:
             topology = self.topology
 
+        vertices = [(name, {"id": name, "_type": "node"}) 
+                    for name in topology["vertices"]]
+        vertices.extend([(vertex, {"id": vertex, "_type": "link"}) 
+                         for vertex in topology["edges"]])
+        edges = [((src, (src,dst)), ((src,dst), dst)) 
+                 for (src, dst) in topology["edges"]]
 
-        for port in topology["nodes"]:
-            g.add_node(port, id=port)
+        g = nx.DiGraph()
 
-        for (src, sink, symmetric) in topology["edges"]:
-            g.add_edge(src, sink)
-            if symmetric: g.add_edge(sink, src)
-
+        g.add_vertices_from(vertices)
+        g.add_edges_from(chain(*edges))
         self.graph = g
         return self.graph
 
@@ -102,4 +121,164 @@ class wrap(FlangeTree):
     "Wrap a reference to a graph"
     def __init__(self, g): self.g = g
     def __call__(self): return self.g
+
+
+### Graph transformation operators
+@autotree("test")
+def select(self, graph): return test(graph)
+
+class op(FlangeTree):
+    def __init__(self, fn, *args):
+        self.fn = fn
+        self.curried = args
+
+    def __call__(self, final):
+        args = [x for x in self.curried]
+        args.append(final)
+        return fn.call(*all_args)
+
+@autotree("att_id", default=None)
+def att(self, graph):
+    def _att(self, graph, vertex_id):
+        try:
+            return nx.get_vertex_attributes(graph, vertex_id)[self.att_id]
+        except:
+            return self.default
+        
+    return [self._att(graph, vertex_id) for vertex_id in graph.vertices()]
+
+
+@autotree("predicate", label="*")
+def collect(self, graph):
+    """Gather verteices that pass a predcate into a hyper-vertex.
+    
+    predicate -- Return a list of vertex names to compress together
+    label -- Name for the vertex representing all combined vertices
+    
+    TODO: Put edge data on to indicate the original vertex vertices
+    TODO: Deal with edge properties (are they copied?  aggregated? modified?)
+    """
+
+    group_vertices = self.predicate(graph)
+    stable_vertices = [vertex for vertex in graph.vertices() if vertex not in group_vertices]
+    
+    synth = graph.subgraph(stable_vertices)
+    synth.add_vertex(self.label)
+    
+    outbound = list(graph.out_edges_iter(group_vertices))
+    inbound = list(graph.in_edges_iter(group_vertices))
+
+    for (start, end) in inbound:
+        if not synth.has_edge(start, self.label) \
+            and start not in group_vertices:
+            synth.add_edge(start, self.label, **graph.get_edge_data(start, end))
+
+    for (start, end) in outbound:
+        if not synth.has_edge(self.label, end) \
+            and end not in group_vertices:
+            synth.add_edge(self.label, end, **graph.get_edge_data(start, end))
+
+    return synth
+
+@autotree()
+def vertices(self, graph):
+    """Return the vertices of a graph.
+    TODO: Convert 'vertices' to an instance of something...so you can use it like 'vertices' instead of 'vertices()'
+    """
+    return graph.vertices()
+
+@autotree("val")
+def startswith(self, names):
+    "Passed a list, returns all xs where x.startswith(val) is true."
+    return [name for name in names if name.startswith(self.val)] 
+
+@autotree("att", "test")
+def all_att(self,  g): 
+    """
+    Return the subgraph containing only vertices with the given attribute/value pair.
+    Test is a function to evaluate with 
+
+    TODO: Generalize so the test can take a whole dictionary, not just a single attribute value
+    """
+
+    if callable(self.test):
+        verts = [v for v in g.vertices() if self.test(g.vertex[v][self.att])]
+    else:
+        verts = [v for v in g.vertices() if g.vertex[v][self.att] == self.test]
+
+    return g.subgraph(verts)
+
+
+@autotree("op", external=True)
+def neighbors(self, graph):
+    """Executes the op on the graph, then re-inserts the node or link 
+    verticies from the original graph and related edges.  
+
+    This makes it easy to (for example) filter to nodes with a given name
+    while keeping the connectivity information.
+
+    op -- Operation to select verticies with
+    external -- Keep link-verticies with only one connection in the subgraph?
+                Such verticies point to some node that is *external* to the subgraph,
+                thus the name.  Default is true.
+    """
+
+    selected = self.op(graph)
+    outbound = chain(*[graph.successors(v) for v in selected.vertices()])
+    inbound = chain(*[graph.predecessors(v) for v in selected.vertices()])
+    
+    subgraph = graph.subgraph(chain(inbound, outbound, selected.vertices()))
+    if not self.external:
+        vertices = [v for v in subgraph.vertices() 
+                    if isnode(v, subgraph)
+                       or len(all_edges(v, subgraph)) > 1]
+        subgraph = graph.subgraph(vertices)
+        
+    return subgraph
+
+
+nodes = all_att("_type", "node")  #Return a graph of just the nodes vertices
+links = all_att("_type", "link")  #Return a graph of just the link vertices 
+
+
+def islink(v, g):
+    "Convenience methods to check if a vertex represents a network node"
+    try:
+        return g.vertex[v]["_type"] == "link"
+    except:
+        return False
+
+def isnode(v, g):
+    "Convenience methods to check if a vertex represents a network node"
+    try:
+        return g.vertex[v]["_type"] == "node"
+    except:
+        return False
+
+def all_edges(v, g):
+    "Convenience method to get inbound and outbound edges related to a vertex"
+    return list(chain(g.out_edges(v), g.in_edges(v)))
+
+@autotree("att", "val")
+def set_att(self, graph, inplace=False):
+    """Set an attribute on all vertices in a graph,
+
+    att -- attribute to set
+    val -- value to set to
+    inplace -- Set true to mutate graph (otherwise makes a copy). Default is False.
+    """
+    g = graph.copy() if not inplace else graph
+    nx.set_node_attributes(g, self.att, self.val)
+    return g
+
+@autotree("predicate")
+def sub(self, graph):
+    "TODO: Extend predicate to include lists and test with 'in'"
+    if callable(self.predicate):
+        vertices = [v for v in graph.vertices()
+                    if self.predicate(v)]
+    else:
+        vertices = self.predicate
+
+    return graph.subgraph(vertices)
 

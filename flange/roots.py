@@ -16,15 +16,24 @@ class rule(FlangeTree):
     def __init__(self, test, action):
         self.test = test
         self.action = action
-
-    def __call__(self, *args):
-        rslt=args
-        if not self.test(*args):
-            rslt = self.action(*args)
-            if not self.test(*rslt):
+    
+    def __call__(self, graph):
+        rslt=graph
+        if not self.test(graph):
+            rslt = self.action(graph)
+            if not self.test(rslt):
                 raise ActionFailureError()
             return rslt
         return rslt
+
+    def focus(self, graph):
+        try : test = self.test.focus(graph)
+        except: test = self.test(graph)
+
+        try: action = self.action.focus(graph)
+        except: action = self.action(graph)
+
+        return (test, action)
 
 class assure(FlangeTree):
     """ 
@@ -35,13 +44,14 @@ class assure(FlangeTree):
             place(property, selector graph)) 
     """
 
-    def __init__(self, property, selector, graph):
-        self.rule = rule(conditions.exists(property, selector, graph), 
-                         actions.place(property, selector, graph))
+    def __init__(self, property, selector):
+        self.rule = rule(conditions.exists(property, selector), 
+                         actions.place(property, selector))
 
     def __call__(self, *args):
         return self.rule(*args)
 
+    def focus(self, graph): return self.rule.focus(graph)
 
 
 class switch(FlangeTree):
@@ -52,11 +62,14 @@ class switch(FlangeTree):
     def __init__(self, *rules):
         self.rules = rules
 
-    def __call__(self):
+    def __call__(self, graph):
         for rule in self.rules:
-            if rule.test():
-                return rule.action()
+            if rule.test(graph):
+                return rule.action(graph)
         raise NoValidChoice("No action take in switch")
+    
+    def focus(self, graph): 
+        return [rule.focus(graph) for rule in self.rules]
 
 
 class group(FlangeTree):
@@ -71,12 +84,15 @@ class group(FlangeTree):
         self.combiner = combiner
         self.actions = actions
 
-    def call(self, graph):
+    def __call__(self, graph):
         result = []
-        for actions in action:
+        for action in self.actions:
             result.push(action(graph))
 
-        return combiner(*result)
+        return self.combiner(*result)
+
+    def focus(self, graph):
+        return [action.focus(graph) for action in self.actions]
 
 class monitor(FlangeTree):
     """Rule prefixed by some gate conditions.  
@@ -89,18 +105,22 @@ class monitor(FlangeTree):
     If re-execution is not needs, raises NoChange.
 
     TODO: take a graph as the argument to "call"; pass the graph ***instance*** into the gate and the rule
-
+    TODO: Gate is a Flange-tree, so 'focus' will return on gate.
     TODO: Make a variant that is a callback on data change instead of polling-based 'retry' based
     TODO: Integrate with rule so it automatically creates this IF there is some dyanmic statement
     """
 
-    def __init__(self, root, gate=lambda: True):
+    def __init__(self, root, gate=lambda g: True):
         self.root = root
         self.gate = gate
         self.prior = None
+    
+    def __call__(self, graph):
+        if self.retry(graph): return self.root(graph)
+        else: raise NoChange()
 
-    def retry(self):
-        condition = self.gate()
+    def retry(self, graph):
+        condition = self.gate(graph)
         if condition == self.prior:
             self.prior = condition
             return False 
@@ -108,6 +128,6 @@ class monitor(FlangeTree):
             self.prior = condition
             return True 
 
-    def __call__(self):
-        if self.retry(): return self.root()
-        else: raise NoChange()
+
+    def focus(self, graph):
+        return (self.gate.focus(graph),  self.root.focus(graph))
