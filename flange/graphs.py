@@ -11,33 +11,41 @@ class unis(FlangeTree):
     default_unis = "http://192.168.100.200:8888"
     _runtime_cache = {}
 
-    def __init__(self, ref="*", source=default_unis):
+    def __init__(self, topology="*", *, host=default_unis):
         self.source = source
-        self.ref = ref
+        self.topology = topology
 
     def __call__(self):
         #TODO: This is a bare-bones buildling of the graph model; make it better
         rt = self._runtime()
         topology = rt
 
-        if not self.ref == "*": 
+        if not self.topology == "*": 
             try:
-                topology= list(rt.topologies.where({"id": self.ref}))[0]
+                topology= list(rt.topologies.where({"id": self.topology}))[0]
             except IndexError:
-                raise ValueError("No topology named '{0}' found in UNIS instance {1}".format(self.ref, self.source)) from None 
+                raise ValueError("No topology named '{0}' found in UNIS instance {1}".format(self.topology, self.source)) from None 
             
-
         g = nx.DiGraph() 
         for port in topology.ports:
             #HACK: Grabbing __dict__ probably won't work for long...
-            g.add_vertex(port.id, **port.__dict__) 
+            g.add_vertex(port.id, **port.__dict__)
 
+        # Assumes endpoints exist in vertex list, just adds the edge-vertex
         for link in topology.links:
+            g.add_vertex(link.id, **link.__dict__)
+
             if not link.directed:
-                g.add_edge(link.endpoints[0].id, link.endpoints[1], **link.__dict__)
-                g.add_edge(link.endpoints[1].id, link.endpoints[2], **link.__dict__)
+                g.add_edge(link.endpoints[0].id, link.id)
+                g.add_edge(link.id, link.endpoints[0].id)
+                
+                g.add_edge(link.endpoints[1].id, link.id)
+                g.add_edge(link.id, link.endpoints[1].id)
+
             else:
-                g.add_edge(link.source.id, link.sink.id, **link.__dict__)
+                g.add_edge(link.source.id, link.id)
+                g.add_edge(link.id, link.sink.id)
+
 
         return g
 
