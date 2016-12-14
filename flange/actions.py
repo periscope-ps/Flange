@@ -1,8 +1,23 @@
 from ._internal import *
 
+def update(original, updates):
+    """Push a set of changed from 'updates' in to the original
 
-#TODO: write update...
-def update(graph, values): pass
+    TODO: Handle vertex/edge deletion (path de-allocation, for example)
+    """
+
+    updated = original.copy()
+
+    for v in updates.vertices():
+        if v not in updated.vertices():
+            updated.add_vertex(v)
+
+        for (att, val) in updates.vertex[v].items():
+            updated.vertex[v][att] = val
+
+
+    return updated
+
 
 @autotree("mod", "at")
 def place(self, graph):
@@ -10,5 +25,4 @@ def place(self, graph):
 
     position = self.at(graph)
     g2 = self.mod(position)
-    return g2
-
+    return update(graph, g2)
