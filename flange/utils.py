@@ -96,7 +96,7 @@ def layout(graph, iterations=2, **layout_args):
     return pos
 
 
-def draw(src, pos=None, ax=None, *, delta={}, label='auto', **layout_args):
+def draw(src, pos=None, ax=None, *, scale=1, delta={}, label='auto', **layout_args):
     """Layout and draw a graph.
 
     src -- graph to layout
@@ -125,15 +125,23 @@ def draw(src, pos=None, ax=None, *, delta={}, label='auto', **layout_args):
     colors = [color(v) for v in graph.vertices()] 
 
     labels = pick_labels(graph, label)
-    sizes = [300 if not islink(v, graph) else 100
+    sizes = [300* scale if not islink(v, graph) else 100*scale
              for v in graph.vertices()]
 
     nx.draw(graph, pos=pos, ax=ax, node_size=sizes, node_color=colors)
-    nx.draw_networkx_labels(graph, labels=labels, pos=pos, ax=ax)
+    nx.draw_networkx_labels(graph, labels=labels, pos=pos, ax=ax, font_size=12*scale)
 
 
-def show(flanglet, src, *, size=(8,10), **layout_args):
-    "Draw a sequence of graphs to reprsent prcoessing" 
+def show(flanglet, src, *, silent=False, size=(8,10), **layout_args):
+    """Draw a sequence of graphs to reprsent prcoessing
+
+    flangelet -- Flange program to run
+    src -- Graph *generator* to run on (not a literal graph)
+
+    silent -- If True, DO NOT return the fig (handy for jupyter notebooks)
+    size -- How large to draw the figure
+    layout_args -- Passed to the layout function
+    """
 
     graph = src if (not isinstance(src, FlangeTree)) else src()
     before = graph.copy()
@@ -155,9 +163,10 @@ def show(flanglet, src, *, size=(8,10), **layout_args):
 
     for (i, sub) in enumerate(foci):
         ax_select = plt.subplot2grid((rows, cols), (3, i))
-        draw(sub, pos=pos, ax=ax_select)
+        draw(sub, pos=pos, ax=ax_select, scale=.65)
 
     delta = diff(before, after)
     draw(after, pos=pos, ax=ax_after, delta=delta)
     
-    return fig
+    if silent: return None
+    else: return fig
