@@ -6,4 +6,11 @@
 
 * Subscribe to UNIS updates in the runtime, re-run monitors when changes occur
 * Graph transformation functions
-* Combiners for groups
+
+# General ideas
+
+* Graphs are made of vertexes and edges
+* Netoworks are made of nodes and links
+* A network path/route is a set of link-verticies that share an common path attribute,
+  adding paths is just adding attributes (but working with them may require reifying 
+  them asa edges in the graph)
