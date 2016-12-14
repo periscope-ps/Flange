@@ -19,16 +19,17 @@ def diff(old, new):
            and values are a description of the change
     """
 
-    delta = defaultdict(list)
-    def extend(key, val):
+    delta = defaultdict(dict)
+    def extend(node, key, val):
         "Create/extend a delta dictionary entry"
-        entries = delta[key]
-        entries.append(val)
+        changes = delta[node]
+        changes[key] = val
  
     def cmp(dict1, dict2):
         "Compare to dictionaries"
         delta = {key:val for (key, val) in dict2.items()
-                if dict2[key] is not dict1[key]}
+                 if key not in dict1.keys() 
+                    or dict2[key] is not dict1[key]}
         
         keys1 = set(dict1.keys())
         keys2 = set(dict2.keys())
@@ -41,15 +42,15 @@ def diff(old, new):
     
     for v in old.vertices():
         if v not in new.vertices():
-            extend(v, ("deleted"))
+            extend(v, "deleted", True)
             
     for v in new.vertices():
         if v not in old.vertices():
-            extend(v, ("added"))
+            extend(v, "added", True)
         else:
             changes = cmp(old.vertex[v], new.vertex[v])
             if changes:
-                extend(v, ("props", changes))
+                extend(v, "props", changes)
             
     return delta 
 
