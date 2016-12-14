@@ -1,9 +1,11 @@
 import networkx as nx
+import matplotlib.pyplot as plt
+from collections import defaultdict
+
 from ._internal import *
 from .graphs import islink, isnode
 
 
-from collections import defaultdict
 def delta(old, new):
     """
     Computes the delta between two nodes.
@@ -81,40 +83,46 @@ def pick_labels(g, strategy):
         return {v: v if not isnode(v,g) else ""
                 for v in g.vertices()}
 
-def draw(src, pos=None, ax=None, *, delta=[], iterations=2, label='auto', **layout_args):
+def layout(graph, iterations=2, **layout_args):
+    layout_args["iterations"] = iterations 
+
+    pos=nx.spectral_layout(graph)
+    pos=nx.spring_layout(graph, pos=pos, **layout_args)
+    return pos
+
+def draw(src, pos=None, ax=None, *, delta=[], label='auto', **layout_args):
     "Layout and draw a graph."
 
-    layout_args["iterations"] = iterations 
-    g = src if (not isinstance(src, FlangeTree)) else src()
+    graph = src if (not isinstance(src, FlangeTree)) else src()
 
-    if pos is None:
-        pos=nx.spectral_layout(g)
-        pos=nx.spring_layout(g, pos=pos, **layout_args)
+    pos = layout(graph, **layout_args) if pos is None else pos
 
     def color(vertex):
         if vertex in delta: return "#439B00"  #yellow: "#FFFF00"
-        if isnode(vertex, g): return "#F85565"
-        if islink(vertex, g): return "#4A7BBB"
+        if isnode(vertex, graph): return "#F85565"
+        if islink(vertex, graph): return "#4A7BBB"
         return "w"
 
-    types = nx.get_node_attributes(g, "_type")
-    colors = [color(v) for v in g.vertices()] 
+    types = nx.get_node_attributes(graph, "_type")
+    colors = [color(v) for v in graph.vertices()] 
 
-    labels = pick_labels(g, label)
-    sizes = [300 if not islink(v, g) else 100
-             for v in g.vertices()]
+    labels = pick_labels(graph, label)
+    sizes = [300 if not islink(v, graph) else 100
+             for v in graph.vertices()]
 
-    nx.draw(g, pos=pos, ax=ax, node_size=sizes, node_color=colors)
-    nx.draw_networkx_labels(g, labels=labels, pos=pos, ax=ax)
+    nx.draw(graph, pos=pos, ax=ax, node_size=sizes, node_color=colors)
+    nx.draw_networkx_labels(graph, labels=labels, pos=pos, ax=ax)
 
-def show(flanglet, graph, *, size=(8,10)):
+
+def show(flanglet, src, *, size=(8,10), **layout_args):
     "Draw a sequence of graphs to reprsent prcoessing" 
 
-    before = graph().copy()
+    graph = src if (not isinstance(src, FlangeTree)) else src()
+    before = graph.copy()
     foci = flanglet.focus(before.copy())
     after = flanglet(before.copy())
 
-    pos = nx.spring_layout(before)
+    pos = layout(before, **layout_args)
     
     fig = plt.gcf()
     fig.set_figheight(size[0])
@@ -124,19 +132,14 @@ def show(flanglet, graph, *, size=(8,10)):
     rows = 4
     ax_before = plt.subplot2grid((rows, cols), (0,0), colspan=cols//2, rowspan=3)
     ax_after = plt.subplot2grid((rows, cols), (0,cols//2), colspan=cols//2, rowspan=3)
-        
-    nx.draw(before, pos=pos, ax=ax_before)
-    nx.draw_networkx_labels(before, pos=pos, ax=ax_before)
+   
+    draw(before, pos=pos, ax=ax_before)
 
     for (i, sub) in enumerate(foci):
         ax_select = plt.subplot2grid((rows, cols), (3, i))
-        nx.draw(sub, pos=pos, ax=ax_select)
-        nx.draw_networkx_labels(sub, pos=pos, ax=ax_select)
+        draw(sub, pos=pos, ax=ax_select)
 
-    nx.draw(after, pos=pos, ax=ax_after)
-    nx.draw_networkx_labels(after, pos=pos, ax=ax_after)
+    changes = delta(before, after)
+    draw(after, pos=pos, ax=ax_after, delta=changes)
     
     return fig
-
-
-
