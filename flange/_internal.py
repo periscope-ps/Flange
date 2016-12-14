@@ -18,7 +18,7 @@ class FlangeTree(object):
         Default implementation is a call to the regular "__call__" method,
         since that should be stateless...
         """
-        return self(graph)
+        return [self(graph)]
 
     def __rshift__(self, other):
         "Chaining operator.  Calls self, then passes result to call of other"
