@@ -28,4 +28,5 @@ nx.classes.Graph.add_vertex = lambda self, *args, **kwargs: self.add_node(*args,
 nx.classes.Graph.add_vertices_from = lambda self, iterable: self.add_nodes_from(iterable)
 nx.classes.Graph.__getattr__ = get_vertex_attr
 
-nx.get_vertex_attributes = lambda g, v: nx.get_node_attributes(g, v)
+nx.get_vertex_attributes = lambda g, name: nx.get_node_attributes(g, name)
+nx.set_vertex_attributes = lambda g, name, vals: nx.set_node_attributes(g, name, vals)

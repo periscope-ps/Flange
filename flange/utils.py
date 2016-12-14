@@ -12,6 +12,7 @@ def diff(old, new):
     Checks for changes in attributes or entity count (vertex added or deleted).
 
     TODO: Check for links added or deleted.
+    TODO: Change property changes to return pair (old, new) with None in a slot for add/del prop
     
     old -- original graph
     new -- updated graph

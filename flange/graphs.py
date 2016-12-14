@@ -285,7 +285,7 @@ def set_att(self, graph, *, inplace=False):
     inplace -- Set true to mutate graph (otherwise makes a copy). Default is False.
     """
     g = graph.copy() if not inplace else graph
-    nx.set_node_attributes(g, self.att, self.val)
+    nx.set_vertex_attributes(g, self.att, self.val)
     return g
 
 @autotree("predicate")
