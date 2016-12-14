@@ -6,25 +6,28 @@ from ._internal import *
 from .graphs import islink, isnode
 
 
-def delta(old, new):
+def diff(old, new):
     """
-    Computes the delta between two nodes.
-    Delta is a change in attributes or entity count (vertex added or deleted)
-    or structure (links added or deleted).
+    Computes the delta-graph between two nodes.
+    Checks for changes in attributes or entity count (vertex added or deleted).
+
+    TODO: Check for links added or deleted.
     
     old -- original graph
     new -- updated graph
     returns -- dictionary where keys are nodes that were changed
            and values are a description of the change
     """
-    
+
     delta = defaultdict(list)
     def extend(key, val):
+        "Create/extend a delta dictionary entry"
         entries = delta[key]
         entries.append(val)
-        
+ 
     def cmp(dict1, dict2):
-        diff = {key:val for (key, val) in dict2.items()
+        "Compare to dictionaries"
+        delta = {key:val for (key, val) in dict2.items()
                 if dict2[key] is not dict1[key]}
         
         keys1 = set(dict1.keys())
@@ -33,7 +36,7 @@ def delta(old, new):
                    for key in keys1.difference(keys2)}
         added = {key:"prop added" 
                  for key in keys2.difference(keys1)}
-        return {**diff, **removed, **added}
+        return {**delta, **removed, **added}
         
     
     for v in old.vertices():
@@ -44,11 +47,11 @@ def delta(old, new):
         if v not in old.vertices():
             extend(v, ("added"))
         else:
-            diff = cmp(old.vertex[v], new.vertex[v])
-            if diff:
-                extend(v, ("props", diff))
+            changes = cmp(old.vertex[v], new.vertex[v])
+            if changes:
+                extend(v, ("props", changes))
             
-    return delta
+    return delta 
 
 
 
@@ -90,15 +93,28 @@ def layout(graph, iterations=2, **layout_args):
     pos=nx.spring_layout(graph, pos=pos, **layout_args)
     return pos
 
-def draw(src, pos=None, ax=None, *, delta=[], label='auto', **layout_args):
-    "Layout and draw a graph."
+
+def draw(src, pos=None, ax=None, *, delta={}, label='auto', **layout_args):
+    """Layout and draw a graph.
+
+    src -- graph to layout
+    pos -- Pre-computed layout
+    ax -- matplotlib axis to draw on
+
+    delta -- Graph diff output
+    label -- Labeling strategy
+    **layout_args -- Arguments passed through to the layout routine
+
+    TODO: More detailed info on deltas
+
+    """
 
     graph = src if (not isinstance(src, FlangeTree)) else src()
 
     pos = layout(graph, **layout_args) if pos is None else pos
 
     def color(vertex):
-        if vertex in delta: return "#439B00"  #yellow: "#FFFF00"
+        if vertex in delta.keys(): return "#439B00"  #yellow: "#FFFF00"
         if isnode(vertex, graph): return "#F85565"
         if islink(vertex, graph): return "#4A7BBB"
         return "w"
@@ -139,7 +155,7 @@ def show(flanglet, src, *, size=(8,10), **layout_args):
         ax_select = plt.subplot2grid((rows, cols), (3, i))
         draw(sub, pos=pos, ax=ax_select)
 
-    changes = delta(before, after)
-    draw(after, pos=pos, ax=ax_after, delta=changes)
+    delta = diff(before, after)
+    draw(after, pos=pos, ax=ax_after, delta=delta)
     
     return fig
