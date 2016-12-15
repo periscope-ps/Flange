@@ -1,4 +1,4 @@
-__all__ = ["actions", "combiners", "conditions", "graphs", "locations", "roots", "runtime", "utils"]
+__all__ = ["actions", "combiners", "conditions", "graphs", "locations", "roots", "runtime", "transforms", "utils"]
 
 from .actions import *
 from .combiners import *
@@ -7,6 +7,7 @@ from .graphs import *
 from .locations import *
 from .roots import *
 from .runtime import *
+from .transforms import *
 from .utils import *
 
 # Flange uses vertex/edge to refer to graph items and node/link to refer to network things.

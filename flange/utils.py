@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 
 from ._internal import *
-from .graphs import islink, isnode
+from .transforms import islink, isnode
 
 
 def diff(old, new):

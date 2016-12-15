@@ -1,4 +1,5 @@
 import unittest
+
 from flange.graphs import *
 import flange
 import flange.combiners as combiners

@@ -1,6 +1,7 @@
 import unittest
 from flange.locations import *
-from flange.graphs import * 
+from flange.graphs import graph
+from flange.transforms import *
 
 class Test_across(unittest.TestCase):
     def test(self):

@@ -1,6 +1,8 @@
 import unittest
+
 import flange
-from flange.graphs import graph, nodes
+from flange.graphs import graph
+from flange.transforms import nodes
 from flange.conditions import *
 
 class TestGroupConditions(unittest.TestCase):

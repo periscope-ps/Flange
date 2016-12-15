@@ -2,7 +2,7 @@ import networkx as nx
 import itertools
 from ._internal import FlangeTree
 from .errors import NoValidChoice
-from .graphs import islink
+from .transforms import islink
 
 class between(FlangeTree):
     def __init__(self, src_selector, dst_selector, criteria=lambda x: 0):
