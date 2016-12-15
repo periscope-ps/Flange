@@ -19,10 +19,16 @@ def update(original, updates):
     return updated
 
 
-@autotree("mod", "at")
-def place(self, graph):
+class place(FlangeTree):
     "Put information at a specific place on the graph"
+    def __init__(self, mod, at):
+        self.mod = mod
+        self.at = at
 
-    position = self.at(graph)
-    g2 = self.mod(position)
-    return update(graph, g2)
+    def __call__(self, graph):
+        position = self.at(graph)
+        g2 = self.mod(position)
+        return update(graph, g2)
+
+    def focus(self, graph):
+        return [self.at(graph)]
