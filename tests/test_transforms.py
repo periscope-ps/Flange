@@ -6,6 +6,13 @@ import flange
 
 
 class Test_transforms(unittest.TestCase):
+    def test_collapse(self):
+       g = graph("ring")()
+       g2 = contract(nodes)(g)
+
+       self.assertEqual(g2.vertices(), nodes(g).vertices())
+       self.assertEqual(len(g2.edges()), 4)
+
     def test_vertices(self):
         g = graph("ring")()
         g2 = nodes(g)
@@ -62,4 +69,3 @@ class Test_transforms(unittest.TestCase):
         transform = neighbors(selector, external=False)
         g2 = transform(g())
         self.assertEqual(13, len(g2.vertices()))
-

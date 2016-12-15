@@ -1,8 +1,33 @@
 import networkx as nx
-from itertools import chain
+from itertools import chain, product
 
 from ._internal import FlangeTree, autotree
 
+
+@autotree("selector")
+def contract(self, graph):
+    """
+    Collapse vertices together, keep connectivity by re-routing edges.
+    Re-routing is done to retain one-hop transitivity.
+
+    Such that if A -> B -> C was the original graph 
+    and A C is selected then the new graph is A -> C.
+    """
+
+    retain = self.selector(graph)
+    removed = [v for v in graph.vertices() if v not in retain.vertices()]
+    contracted = graph.subgraph(retain.vertices())
+    
+    for v in removed:
+        inbound = [src for (src,dst) in graph.in_edges(v) 
+                   if src in contracted.vertices()]
+        outbound = [dst for (src,dst) in graph.out_edges(v)
+                    if dst in contracted.vertices()]
+
+        for (src, dst) in product(inbound, outbound):
+            contracted.add_edge(src, dst)
+            
+    return contracted
 
 @autotree("test")
 def select(self, graph): return test(graph)
