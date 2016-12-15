@@ -4,7 +4,7 @@ import random
 from flange.conditions import *
 from flange.roots import *
 from flange.graphs import *
-import flange
+from flange.errors import *
 
 class Test_rule(unittest.TestCase):
     def test_action_pass(self):
@@ -17,7 +17,7 @@ class Test_rule(unittest.TestCase):
 
     def test_double_fail(self):
         c = rule(lambda *x: 4<3, lambda *x: [4])
-        self.assertRaises(flange.ActionFailureError, c, None)
+        self.assertRaises(ActionFailureError, c, None)
 
 class Test_switch(unittest.TestCase):
     FALSE = lambda *x: False
@@ -45,7 +45,7 @@ class Test_switch(unittest.TestCase):
         s = switch(rule(self.FALSE, lambda *x: None),
                    rule(self.FALSE, lambda *x: None),
                    rule(self.FALSE, lambda *x: None))
-        self.assertRaises(flange.NoValidChoice, s, None)
+        self.assertRaises(NoValidChoice, s, None)
 
 
 class Test_monitor(unittest.TestCase):
