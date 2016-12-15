@@ -48,8 +48,8 @@ def autotree(*passed_args, **passed_kwargs):
             # Handle *args
             if len(args) > len(passed_args) \
                  and len(passed_args) > 0 \
-                 and passed_args[-1].beginswith("*") \
-                 and not passed_args[-1].beginswith("**"):
+                 and passed_args[-1].startswith("*") \
+                 and not passed_args[-1].startswith("**"):
                      self.__dict__[name[1:]] = args[len(passed_args):]
 
             for (name, val) in passed_kwargs.items():
