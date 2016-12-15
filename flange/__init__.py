@@ -1,19 +1,22 @@
-__all__ = ["locations", "graphs", "conditions", "errors", "actions"]
-from .locations import *
-from .graphs import *
-from .conditions import *
-from .roots import *
+__all__ = ["actions", "combiners", "conditions", "graphs", "locations", "roots", "runtime", "utils"]
+
 from .actions import *
+from .combiners import *
+from .conditions import *
+from .graphs import *
+from .locations import *
+from .roots import *
+from .runtime import *
+from .utils import *
 
-
-import networkx as nx
 # Flange uses vertex/edge to refer to graph items and node/link to refer to network things.
 # So we monkey patch in a vertices-named methods for all the graph classes
 # Patching here seems to work when importing any flange modules...
 # and any subsequent use of networkx by any module.
 # This might not be good form, and it might be mildly dangerous, since
-# these methods could theoretically be overwitten subsequently by other module imports.
+# these methods could theoretically be overwritten subsequently by other module imports.
 # Live (slightly) dangerously
+import networkx as nx
 
 def get_vertex_attr(self, item):
     if item == "vertex": return self.node
