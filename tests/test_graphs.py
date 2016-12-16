@@ -1,8 +1,6 @@
+import importlib
 import unittest
 import urllib
-from unis.models import *
-from unis.runtime import Runtime
-
 from flange.graphs import *
 import flange
 
@@ -37,6 +35,12 @@ class Test_graph(unittest.TestCase):
         self.assertEqual(len(g.edges()), 20)
 
 
+
+unis_found = importlib.util.find_spec("unis") is not None
+if unis_found:
+    from unis.models import *
+    from unis.runtime import Runtime
+
 class Test_unis(unittest.TestCase):
     explicit_host = "http://192.168.100.200:8888"
 
@@ -50,6 +54,9 @@ class Test_unis(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        if not unis_found:
+            raise unittest.SkipTest("Unis module not found")
+
         unis._runtime_cache = {}
 
         cls._try_connection(cls.explicit_host)
