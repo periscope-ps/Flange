@@ -15,5 +15,6 @@ setup(
     author_email = "jcottam@indiana.edu",
     description = "Declaratively program networks",
     packages=find_packages(),
-    test_suite="tests"
+    test_suite="tests",
+    install_requires=["networkx"]
 )
