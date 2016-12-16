@@ -132,13 +132,13 @@ def draw(src, pos=None, ax=None, *, scale=1, delta={}, label='auto', **layout_ar
     nx.draw_networkx_labels(graph, labels=labels, pos=pos, ax=ax, font_size=12*scale)
 
 
-def show(flanglet, src, *, silent=False, size=(8,10), **layout_args):
+def show(flanglet, src, *, return_fig=False, size=(8,10), **layout_args):
     """Draw a sequence of graphs to reprsent prcoessing
 
     flangelet -- Flange program to run
     src -- Graph *generator* to run on (not a literal graph)
 
-    silent -- If True, DO NOT return the fig (handy for jupyter notebooks)
+    return_fig -- Return the figure (instead of the graph)
     size -- How large to draw the figure
     layout_args -- Passed to the layout function
     """
@@ -168,5 +168,5 @@ def show(flanglet, src, *, silent=False, size=(8,10), **layout_args):
     delta = diff(before, after)
     draw(after, pos=pos, ax=ax_after, delta=delta)
     
-    if silent: return None
-    else: return fig
+    if return_fig: return fig
+    else: return after
