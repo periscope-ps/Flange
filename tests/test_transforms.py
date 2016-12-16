@@ -1,4 +1,5 @@
 import unittest
+import itertools
 
 from flange.transforms import *
 from flange.graphs import graph
@@ -15,8 +16,16 @@ class Test_transforms(unittest.TestCase):
 
     def test_vertices(self):
         g = graph("ring")()
+        verts = vertices()(g)
+
+        expected = set(itertools.chain(graph.ring["nodes"], graph.ring["links"]))
+        self.assertEqual(set(verts), expected)
+
+    def test_nodes(self):
+        g = graph("ring")()
         g2 = nodes(g)
-        self.assertEqual(len(g2.vertices()), len(graph.ring["vertices"]))
+        self.assertEqual(len(g2.vertices()), len(graph.ring["nodes"]))
+        self.assertEqual(set(g2.vertices()), set(graph.ring["nodes"]))
 
     def test_set_att(self):
         g = graph("linear")()

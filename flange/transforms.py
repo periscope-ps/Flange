@@ -12,6 +12,12 @@ def contract(self, graph):
 
     Such that if A -> B -> C was the original graph 
     and A C is selected then the new graph is A -> C.
+
+
+    TODO: Change selector to select *removed* items rather than *retained* ones
+          This should help with composition.
+    TODO: Support multiple, sequential selectors so you can do contract(links, ports) 
+          instead of contract(links) >> contract(ports)
     """
 
     retain = self.selector(graph)
@@ -88,7 +94,8 @@ def collect(self, graph):
 @autotree()
 def vertices(self, graph):
     """Return the vertices of a graph.
-    TODO: Convert 'vertices' to an instance of something...so you can use it like 'vertices' instead of 'vertices()'
+
+    TODO: Should this return a graph?  Seems odd that it doesn't
     """
     return graph.vertices()
 
