@@ -6,11 +6,11 @@ import flange
 
 
 class Test_transforms(unittest.TestCase):
-    def test_collapse(self):
+    def test_contract(self):
        g = graph("ring")()
        g2 = contract(nodes)(g)
 
-       self.assertEqual(g2.vertices(), nodes(g).vertices())
+       self.assertEqual(set(g2.vertices()), set(nodes(g).vertices()))
        self.assertEqual(len(g2.edges()), 4)
 
     def test_vertices(self):
@@ -69,3 +69,10 @@ class Test_transforms(unittest.TestCase):
         transform = neighbors(selector, external=False)
         g2 = transform(g())
         self.assertEqual(13, len(g2.vertices()))
+
+    def test_one(self):
+       g = graph("layers")
+       g2 = one()(g())
+
+       self.assertEqual(len(g2), 1)
+       self.assertIn(g2.vertices()[0], g().vertices())

@@ -187,3 +187,14 @@ def sub(self, graph):
 
     return graph.subgraph(vertices)
 
+@autotree()
+def one(self, graph):
+    """One item from a graph
+
+    TODO: Considering extending with further vertex-oriented filter (and rename to 'oneOf')
+    """
+    try:
+        return graph.subgraph(graph.vertices()[0])
+    except:
+        raise ValueError("Cannot select single item from graph")
+
