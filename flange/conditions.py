@@ -20,7 +20,7 @@ class exists(GroupCondition):
     def test(self,  passing_items, raw_items):
         return len(passing_items) > 0
 
-class exactlyOne(GroupCondition):
+class justOne(GroupCondition):
     def test(self, passing_items, raw_items):
         return len(passing_items) == 1
 

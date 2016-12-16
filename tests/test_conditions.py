@@ -16,17 +16,17 @@ class TestGroupConditions(unittest.TestCase):
                    lambda g: g.vertices())
         self.assertFalse(t(graph("linear")()))
 
-    def test_exactlyone_pass(self):
+    def test_one_pass(self):
         t = exists(lambda n, g: g.vertex[n]["id"] == "port1",
                    lambda g: g.vertices())
         self.assertTrue(t(graph("linear")()))
 
-    def test_exactlyOne_fail(self):
-        t = exactlyOne(lambda n, g: g.degree(n) == 0,
+    def test_justOne_fail(self):
+        t = justOne(lambda n, g: g.degree(n) == 0,
                    lambda g: g.vertices())
         self.assertFalse(t(graph("linear")()))
 
-        t = exactlyOne(lambda n, g: g.degree(n) > 0,
+        t = justOne(lambda n, g: g.degree(n) > 0,
                    lambda g: g.vertices())
         self.assertFalse(t(graph("linear")()))
 
