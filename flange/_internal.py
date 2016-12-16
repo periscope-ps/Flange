@@ -22,7 +22,12 @@ class FlangeTree(object):
 
     def __rshift__(self, other):
         "Chaining operator.  Calls self, then passes result to call of other"
-        return lambda arg: other(self(arg))
+        return _shiftOp(self, other)
+
+    def __lshift__(self, other):
+        "Reverse chaining operator.  Calls other then calls self on the result"
+        return _shiftOp(other, self)
+
 
 def autotree(*passed_args, **passed_kwargs):
     """
@@ -72,3 +77,8 @@ def autotree(*passed_args, **passed_kwargs):
         return build_class(fn, fn.__name__, passed_args, passed_kwargs)
     
     return decorator
+
+
+@autotree("first", "second")
+def _shiftOp(self, graph): return self.second(self.first(graph))
+
