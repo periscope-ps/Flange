@@ -1,3 +1,5 @@
+build-status:[![Build Status](https://travis-ci.org/periscope-ps/Flange.svg?branch=master)](https://travis-ci.org/periscope-ps/Flange) 
+
 # General Things TODO
 
 * Add ID to rule instances so the effects of a rule can be tracked.  
