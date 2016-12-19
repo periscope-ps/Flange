@@ -16,5 +16,5 @@ setup(
     description = "Declaratively program networks",
     packages=find_packages(),
     test_suite="tests",
-    install_requires=["networkx"]
+    install_requires=["networkx", "matplotlib"]
 )
