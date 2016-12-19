@@ -1,7 +1,8 @@
 import unittest
 import networkx as nx
 from flange.actions import *
-from flange.graphs import *
+from flange.graphs import graph
+from flange.transforms import set_att, sub, nodes
 import flange
 
 class Test_place(unittest.TestCase):
@@ -14,7 +15,7 @@ class Test_place(unittest.TestCase):
         g2 = p(g())
         self.assertTrue(g2.vertex["port3"]["firewall"])
 
-class Test_place(unittest.TestCase):
+class Test_update(unittest.TestCase):
     def test_add_property(self):
         g1 = graph("linear")()
         u = nx.DiGraph()

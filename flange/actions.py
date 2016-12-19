@@ -1,7 +1,7 @@
 from ._internal import *
 
 def update(original, updates):
-    """Push a set of changed from 'updates' in to the original
+    """Copy a set of changed from 'updates' in to the original
 
     TODO: Handle vertex/edge deletion (path de-allocation, for example)
     """
