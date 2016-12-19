@@ -1,4 +1,4 @@
-build-status:[![Build Status](https://travis-ci.org/periscope-ps/Flange.svg?branch=master)](https://travis-ci.org/periscope-ps/Flange) 
+[![Build Status](https://travis-ci.org/periscope-ps/Flange.svg?branch=master)](https://travis-ci.org/periscope-ps/Flange) 
 
 # General Things TODO
 
