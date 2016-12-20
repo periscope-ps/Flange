@@ -21,7 +21,7 @@ class between(FlangeTree):
                 sufficient but combinations of links are.
         """
 
-        paths = self.focus(graph)
+        paths = self.steps(graph)
         ranked = sorted(paths, key=self.criteria)
         try:
             return graph.subgraph(ranked[0][1:-1])
@@ -29,7 +29,7 @@ class between(FlangeTree):
             raise NoValidChoice("No paths found from selected source/target vertex/vertices", )
 
 
-    def focus(self, graph):
+    def steps(self, graph):
         #TODO: Extend to multiple source/targets
         s = self.src_selector(graph).vertices()[0]
         t = self.dst_selector(graph).vertices()[0]
@@ -50,7 +50,7 @@ class on(FlangeTree):
         synth = graph.subgraph(vertices)
         return synth
 
-    def focus(self, graph):
+    def steps(self, graph):
         return self.selector(graph)
 
 class around(FlangeTree):
@@ -67,7 +67,7 @@ class around(FlangeTree):
         inbound = itertools.chain(*[graph.predecessors(v) for v in selected.vertices()])
         return graph.subgraph(itertools.chain(inbound, outbound))
     
-    def focus(self, graph):
+    def steps(self, graph):
         return self.selector(graph)
 
 class near(FlangeTree):
@@ -110,7 +110,7 @@ class near(FlangeTree):
         preferred = min(valid, key=lambda e: e[1])
         return graph.subgraph(preferred[0][-1])
     
-    def focus(self, graph):
+    def steps(self, graph):
         return self.selector(graph)
     
 
@@ -173,5 +173,5 @@ class across(FlangeTree):
         
         return graph.subgraph(cutset)
 
-    def focus(self, graph):
+    def steps(self, graph):
         return self.selector(graph)

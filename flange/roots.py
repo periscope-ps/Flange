@@ -26,11 +26,11 @@ class rule(FlangeTree):
             return rslt
         return rslt
 
-    def focus(self, graph):
-        try : test = self.test.focus(graph)
+    def steps(self, graph):
+        try : test = self.test.steps(graph)
         except: test = self.test(graph)
 
-        try: action = self.action.focus(graph)
+        try: action = self.action.steps(graph)
         except: action = self.action(graph)
 
         return (test, action)
@@ -51,7 +51,7 @@ class assure(FlangeTree):
     def __call__(self, *args):
         return self.rule(*args)
 
-    def focus(self, graph): return self.rule.focus(graph)
+    def steps(self, graph): return self.rule.steps(graph)
 
 
 class switch(FlangeTree):
@@ -68,8 +68,8 @@ class switch(FlangeTree):
                 return rule.action(graph)
         raise NoValidChoice("No action take in switch")
     
-    def focus(self, graph): 
-        return [rule.focus(graph) for rule in self.rules]
+    def steps(self, graph): 
+        return [rule.steps(graph) for rule in self.rules]
 
 
 class group(FlangeTree):
@@ -91,8 +91,8 @@ class group(FlangeTree):
 
         return self.combiner(*result)
 
-    def focus(self, graph):
-        return [action.focus(graph) for action in self.actions]
+    def steps(self, graph):
+        return [action.steps(graph) for action in self.actions]
 
 class monitor(FlangeTree):
     """Rule prefixed by some gate conditions.  
@@ -105,7 +105,7 @@ class monitor(FlangeTree):
     If re-execution is not needs, raises NoChange.
 
     TODO: take a graph as the argument to "call"; pass the graph ***instance*** into the gate and the rule
-    TODO: Gate is a Flange-tree, so 'focus' will return on gate.
+    TODO: Gate is a Flange-tree, so 'steps' will return on gate.
     TODO: Make a variant that is a callback on data change instead of polling-based 'retry' based
     TODO: Integrate with rule so it automatically creates this IF there is some dyanmic statement
     """
@@ -129,5 +129,5 @@ class monitor(FlangeTree):
             return True 
 
 
-    def focus(self, graph):
-        return (self.gate.focus(graph),  self.root.focus(graph))
+    def steps(self, graph):
+        return (self.gate.steps(graph),  self.root.steps(graph))

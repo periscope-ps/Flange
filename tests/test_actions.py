@@ -23,6 +23,6 @@ class Test_update(unittest.TestCase):
         nx.set_vertex_attributes(u, "firewall", True)
 
 
-        g2 = update(g1, u)
+        g2 = _update(g1, u)
         self.assertTrue(g2.vertex["port1"]["firewall"])
         self.assertEqual(set(g1.vertices()), set(g2.vertices()))

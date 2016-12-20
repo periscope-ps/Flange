@@ -145,7 +145,7 @@ def show(flanglet, src, *, return_fig=False, size=(8,10), **layout_args):
 
     graph = src if (not isinstance(src, FlangeTree)) else src()
     before = graph.copy()
-    foci = flanglet.focus(before.copy())
+    foci = flanglet.steps(before.copy())
     after = flanglet(before.copy())
 
     pos = layout(before, **layout_args)
