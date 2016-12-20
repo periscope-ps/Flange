@@ -1,6 +1,6 @@
 import unittest
 import networkx as nx
-from flange.actions import *
+from flange.actions import place, _update
 from flange.graphs import graph
 from flange.transforms import set_att, sub, nodes
 import flange
