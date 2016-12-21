@@ -4,7 +4,6 @@ import networkx as nx
 from flange.fairflow import *
 
 def build_graph():
-    util = Utils()
     g = nx.Graph()
 
     nodeA = g.add_node('A')
@@ -23,19 +22,6 @@ def build_graph():
     g.add_edge('C', 'F', weight=6)
     g.add_edge('D', 'E', weight=6)
     g.add_edge('E', 'F', weight=9)
-
-    app1 = app("app1", 10, 'A', 'B')
-    app2 = app("app2", 1, 'A', 'B')
-    app3 = app("app3", 0.5, 'A', 'C')
-
-    app1.set_demand(15)
-    app2.set_demand(5)
-    app3.set_demand(10)
-
-    applist = [app1, app2, app3]
-
-    util.assign_flowgroup(g, applist)
-    fg_list = util.get_flowgroups()
 
     return g
 
@@ -150,9 +136,4 @@ class Test_fairflow_graph(unittest.TestCase):
         t1.add_channels(self.graph)
         allocated = t1.request_bandwidth(11)
         self.assertEqual(allocated, 10)
-
-if __name__ == '__main__':
-
-    unittest.main()
-
 

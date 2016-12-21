@@ -9,16 +9,19 @@ import operator
 import networkx as nx
 
 class app:
-    def __init__(self, iD, weight, source_site, destination_site):
+    def __init__(self, iD, weight, source_site, destination_site, demand):
         self.Id = iD
         self.weight = weight
         self.source = source_site
         self.destination = destination_site
         self.allow_access = False
-        self.demand = 0
+        self.demand = demand
 
     def set_demand (self, demand):
         self.demand = demand
+
+    def get_demand (self):
+        return self.demand
 
     def print_application (self):
         print("### Application %s Details ###\n" %(self.Id))
@@ -53,7 +56,7 @@ class FlowGroup:
         return self.applist
 
     def print_flowgroup (self):
-        util = Utils()
+        util = Alloc_Manager()
         print("### FlowGroup %s Details ###\n" %(self.id))
         print("Source = %s" %(self.source))
         print("Destination = %s" %(self.destination))
@@ -82,8 +85,6 @@ class Edge:
 
 class Tunnel:
     def __init__(self, nodes):
-        #self.source = source
-        #self.destination = destination
         self.nodes = nodes
         self.channels = []
         self.total_bandwidth = 0
@@ -116,7 +117,7 @@ class Tunnel:
             return 0
 
     def __repr__(self):
-        return "{0} ====[{1:.2f}] {2}".format(self.channels[0].source, self.channels[0].weight, self.channels[-1].des)
+        return "{0} ====[{1:.2f}] {2}, nodes {3}".format(self.channels[0].source, self.channels[0].weight, self.channels[-1].des, self.nodes)
 
     def print_tunnel (self):
         print("Tunnel Path :", end="")
@@ -129,11 +130,18 @@ class Tunnel:
         print("\nTunnel total bandwidth = %s" %(self.total_bandwidth))
         print("Tunnel available bandwidth = %s" %(min(map ((lambda edge: edge.weight), self.channels))))
 
-class Utils:
+class Alloc_Manager:
 
     def __init__ (self):
-        self.fg_id = 0
         self.flowgroups = []
+
+    def __call__(self, graph, applist, bandwidth_allocater):
+        self.assign_flowgroup(graph, applist)
+        fg_list = self.get_flowgroups()
+
+        bandwidth_allocater(fg_list)
+
+        return graph
 
     def assign_flowgroup (self, graph, applist):
         for app in applist:
@@ -144,9 +152,7 @@ class Utils:
                     flwg_assigned = True
                     break
             if not flwg_assigned:
-                flwg_id = self.fg_id + 1
-                self.fg_id += 1
-                new_flwg = FlowGroup("FLWG" + str(flwg_id), app.source, app.destination)
+                new_flwg = FlowGroup("FLWG-" + app.source + app.destination, app.source, app.destination)
                 new_flwg.add_app(app)
                 self.flowgroups.append(new_flwg)
 
@@ -155,6 +161,11 @@ class Utils:
 
     def get_flowgroups (self):
         return self.flowgroups
+
+    def get_flowgroup_by_id (self, flwg_id):
+        for flwg in self.flowgroups:
+            if flwg_id == flwg.id:
+                return flwg
 
     def assign_tunnels (self, graph, flowG):
         paths = nx.all_simple_paths(graph, flowG.source, flowG.destination)
@@ -185,7 +196,8 @@ class B4_Max_Min_Fairshare:
     def __init__(self):
         self.fairshare = 0
 
-    def generate_TunnelGroup (self, FGlist):
+    # Generate Tunnel Group
+    def __call__ (self, FGlist):
         FGlist.sort(key = lambda x: x.demand)
 
         while (True):
@@ -199,7 +211,7 @@ class B4_Max_Min_Fairshare:
                         request_bw = flwG.demand
 
                     tup = flwG.preferred_tunnels.items()
-
+                    
                     for t in tup:
                         allocated_bw = t[0].request_bandwidth(request_bw)
                         flwG.demand -= allocated_bw
@@ -223,68 +235,55 @@ class B4_Max_Min_Fairshare:
                         bottleneck = 0
 
             if (demands_satisfied == 1) or (bottleneck == 1):
-                print("\n!!! B4_Max_Min_Fairshare Algorithm Terminated - Either Flow Graph demands satisfied or Bottleneck occured !!!\n")
+                #print("\n!!! B4_Max_Min_Fairshare Algorithm Terminated - Either Flow Graph demands satisfied or Bottleneck occured !!!\n")
                 break
 
             if (self.fairshare > 1000):
-                print("\n!!! B4_Max_Min_Fairshare Algorithm - Either Infinite Loop or High Bandwidth Channels !!!\n")
+                #print("\n!!! B4_Max_Min_Fairshare Algorithm - Either Infinite Loop or High Bandwidth Channels !!!\n")
                 break
 
-        for flwG in FGlist:
-            flwG.print_flowgroup()
+        #for flwG in FGlist:
+        #    flwG.print_flowgroup()
 
         return
 
+class Bandwidth_Inorder:
 
-if __name__ == '__main__':
-    util = Utils()
-    g = nx.Graph()
+    # allocate bandwidth
+    def __call__(self, FGlist):
+        while (True):
+            for flwG in FGlist:
+                if flwG.demand > 0:
+                    request_bw = flwG.demand
 
-    nodeA = g.add_node('A')
-    nodeB = g.add_node('B')
-    nodeC = g.add_node('C')
-    nodeD = g.add_node('D')
-    nodeE = g.add_node('E')
-    nodeF = g.add_node('F')
+                    tup = flwG.preferred_tunnels.items()
+                    
+                    for t in tup:
+                        allocated_bw = t[0].request_bandwidth(request_bw)
+                        flwG.demand -= allocated_bw
+                        flwG.preferred_tunnels[t[0]] += allocated_bw
+                        flwG.allocated += allocated_bw
+                        if allocated_bw == request_bw:
+                            break
+                        else:
+                            request_bw -= allocated_bw
 
-    g.add_edge('A', 'B', weight=7)  
-    g.add_edge('A', 'C', weight=9)
-    g.add_edge('A', 'F', weight=14)  
-    g.add_edge('B', 'C', weight=10)
-    g.add_edge('B', 'D', weight=15)
-    g.add_edge('C', 'D', weight=11)
-    g.add_edge('C', 'F', weight=6)
-    g.add_edge('D', 'E', weight=6)
-    g.add_edge('E', 'F', weight=9)
+            demands_satisfied = 1
+            bottleneck = 1
 
-#    nodeA = g.add_node('A')
-#    nodeB = g.add_node('B')
-#    nodeC = g.add_node('C')
-#    nodeD = g.add_node('D')
-#
-#    g.add_edge('A', 'B', weight=10)  
-#    g.add_edge('A', 'C', weight=10)
-#    g.add_edge('A', 'D', weight=5)  
-#    g.add_edge('B', 'C', weight=10)
-#    g.add_edge('C', 'D', weight=5)
+            for flwG in FGlist:
+                if flwG.demand != 0:
+                    demands_satisfied = 0
 
-    app1 = app("app1", 10, 'A', 'B')
-    app2 = app("app2", 1, 'A', 'B')
-    app3 = app("app3", 0.5, 'A', 'C')
+                tup = flwG.preferred_tunnels.items()
+                for t in tup:
+                    if (min(map ((lambda edge: edge.weight), t[0].channels))) != 0:
+                        bottleneck = 0
 
-    app1.set_demand(15)
-    app2.set_demand(5)
-    app3.set_demand(10)
+            if (demands_satisfied == 1) or (bottleneck == 1):
+                break
 
-    app1.print_application()
-    app2.print_application()
-    app3.print_application()
+        #for flwG in FGlist:
+        #    flwG.print_flowgroup()
 
-    applist = [app1, app2, app3]
-
-    util.assign_flowgroup(g, applist)
-    fg_list = util.get_flowgroups()
-
-    b4_fairflow = B4_Max_Min_Fairshare()
-    b4_fairflow.generate_TunnelGroup(fg_list)
-
+        return

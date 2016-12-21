@@ -1,3 +1,4 @@
+import networkx as nx
 from ._internal import autotree
 """
 Combiners take a set of results and put them together into a single result.
@@ -8,7 +9,7 @@ Combiners return the result graph if the succeed OR a CombinerException if
 class CombinerFailure(RuntimeError):
     """A combiner did not succeed. The unexecuted rules and partially modified graph
     are returned here."""
-    def __init__(self, rules):
+    def __init__(self, rules, graph):
         super()
         self.rules = rules
         self.graph = graph
@@ -42,14 +43,14 @@ def best(self, graph):
     TODO: Communicate which rule was used?
     """
 
-    def swallow(rule):
+    def swallow(rule, g):
         try:
-            return rule(graph)
+            return rule(g)
         except:
             return None
 
-    options = [swallow(rule) for rule in self.rules]
-    options = filter(lambda x: x is not None, options)
+    options = [swallow(rule, nx.Graph(graph)) for rule in self.rules]
+    options = list(filter(lambda x: x is not None, options))
 
     weights = [self.weight(option) for option in options]
     max_at = weights.index(max(weights))
@@ -66,13 +67,13 @@ def best_effort(self, graph):
     """
 
     fails = []
-    for rule in rules:
+    for rule in self.rules:
         try:
             graph = rule(graph)
         except:
             fails.append(rule)
 
-    if return_fails and len(fails) > 0: 
+    if self.return_fails and len(fails) > 0: 
         return (graph, fails)
     else:
         return graph
