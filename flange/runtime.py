@@ -2,7 +2,16 @@ from time import sleep
 from .errors import NoChange
 
 def Runtime(object):
-    def __init__(self, *rules, period=.5):
+    def __init__(self, graph_souce, *rules, *, period=.5):
+        """
+        graph_source -- Function that generates the graphs
+        rules -- Rules to run on the graph source.
+
+
+        period -- Refresh frequency
+        """
+
+        self.graph = graph_source
         self.rules = rules if rules else []
         self.period = period
         self._run = False
@@ -15,9 +24,10 @@ def Runtime(object):
 
     def apply(self):
         results = []
+        graph = self.graph()
         for rule in self.rules:
             try :
-                results.append(rule())
+                results.append(rule(graph))
             except NoChange: pass  ##Ignore "no-change" rules
 
         #TODO: Composite results
