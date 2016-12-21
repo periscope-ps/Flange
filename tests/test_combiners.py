@@ -108,7 +108,3 @@ def build_graph():
 
     return g
 
-if __name__ == '__main__':
-
-    unittest.main()
-
