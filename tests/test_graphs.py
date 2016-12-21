@@ -25,8 +25,8 @@ class Test_graph(unittest.TestCase):
         self.assertEqual(len(g().vertices()), 3)
 
     def test_manual(self):
-        g = graph(vertices=["port1","port2","port3","port4","port5","port6"], 
-                  edges=[("port1", "port2"), ("port2", "port1"),
+        g = graph(nodes=["port1","port2","port3","port4","port5","port6"], 
+                  links=[("port1", "port2"), ("port2", "port1"),
                          ("port2", "port3"), ("port3", "port2"),
                          ("port3", "port4"), ("port4", "port3"),
                          ("port4", "port5"), ("port5", "port4"),

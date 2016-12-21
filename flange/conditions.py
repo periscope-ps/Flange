@@ -13,7 +13,7 @@ class GroupCondition(FlangeTree):
     def test(self, passing_items, raw_items):
         raise Error("Not implemented")
 
-    def focus(self, graph):
+    def steps(self, graph):
         return self.selector(graph)
 
 class exists(GroupCondition):

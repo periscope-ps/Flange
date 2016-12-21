@@ -5,28 +5,28 @@ from ._internal import FlangeTree
 
 
 class graph(FlangeTree):
-    linear = {"vertices": ["port1","port2","port3","port4"],
-              "edges": [("port1", "port2"), ("port2", "port3"),("port3", "port4"),
+    linear = {"nodes": ["port1","port2","port3","port4"],
+              "links": [("port1", "port2"), ("port2", "port3"),("port3", "port4"),
                         ("port2", "port1"), ("port3", "port2"),("port4", "port3")]}
 
-    ring = {"vertices": ["port1", "port2", "port3", "port4"],
-            "edges": [("port1", "port2"), ("port2", "port3"),
+    ring = {"nodes": ["port1", "port2", "port3", "port4"],
+            "links": [("port1", "port2"), ("port2", "port3"),
                       ("port3", "port4"), ("port4", "port1")]}
 
-    dynamic=[{"vertices": ["p1", "p2", "p3"], "edges": []},
-             {"vertices": ["p1", "p2", "p3", "p4"], "edges": []},
-             {"vertices": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
-             {"vertices": ["p1", "p2", "p3", "p4", "p5"], "edges": []},
-             {"vertices": ["p1", "p2", "p3", "p4", "p5", "p6"], "edges": []}]
+    dynamic=[{"nodes": ["p1", "p2", "p3"], "links": []},
+             {"nodes": ["p1", "p2", "p3", "p4"], "links": []},
+             {"nodes": ["p1", "p2", "p3", "p4", "p5"], "links": []},
+             {"nodes": ["p1", "p2", "p3", "p4", "p5"], "links": []},
+             {"nodes": ["p1", "p2", "p3", "p4", "p5", "p6"], "links": []}]
 
-    ab_ring = {"vertices": ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3"],
-               "edges": [("A1", "A2"), ("A2", "A3"), ("A3", "B1"), 
+    ab_ring = {"nodes": ["A1", "A2", "A3", "A4", "A5", "B1", "B2", "B3"],
+               "links": [("A1", "A2"), ("A2", "A3"), ("A3", "B1"), 
                         ("B1", "A4"), 
                         ("A4", "B2"), ("B2", "B3"), ("B3", "A5"),
                         ("A5", "A1")]}
 
-    layers = {"vertices": ["Z1", "A1", "A2", "A3", "B1", "B2", "C1", "C2", "D1"],
-              "edges": [("Z1", "A1"), ("Z1", "A2"), ("Z1", "A3"),
+    layers = {"nodes": ["Z1", "A1", "A2", "A3", "B1", "B2", "C1", "C2", "D1"],
+              "links": [("Z1", "A1"), ("Z1", "A2"), ("Z1", "A3"),
                         ("A1", "Z1"), ("A2", "Z1"), ("A3", "Z1"),
                         ("A1", "B1"), ("A1", "B2"), ("A2", "B1"), ("A2", "B2"), ("A3", "B1"), ("A3", "B2"),
                         ("B1", "A1"), ("B2", "A1"), ("B1", "A2"), ("B2", "A2"), ("B1", "A3"), ("B2", "A3"),
@@ -35,21 +35,30 @@ class graph(FlangeTree):
                         ("C1", "D1"), ("C2", "D1"),
                         ("D1", "C1"), ("D1", "C2")]}
 
-    def __init__(self, topology=None, *, vertices=None, edges=None):
+
+    osiris = {"nodes":["IU", "WSU", "MSU", "CHIC", "SALT", "SC16", "IU-Crest", "UMich", "Cloudlab"],
+              "links": [("IU", "CHIC"), ("CHIC", "IU"),
+                        ("UMich", "CHIC"), ("CHIC", "UMich"),
+                        ("WSU", "CHIC"), ("CHIC", "WSU"),
+                        ("MSU", "CHIC"), ("CHIC", "MSU"),
+                        ("SALT","CHIC"), ("CHIC", "SALT"),
+                        ("Cloudlab", "SALT"), ("SALT", "Cloudlab"), 
+                        ("SC16", "SALT"), ("SALT", "SC16"), 
+                        ("SC16", "UMich"), ("UMich", "SC16"),
+                        ("SC16", "IU-Crest"), ("IU-Crest", "SC16")]}
+
+    def __init__(self, topology=None, *, nodes=None, links=None):
         self.dynamic=0
 
         if topology is not None \
-           and (vertices is not None
-                or edges is not None):
-            raise ValueError("Specify topology OR nodes & edges.  Not both.")
+           and (nodes is not None
+                or links is not None):
+            raise ValueError("Specify topology OR nodes & links.  Not both.")
 
-        if vertices is not None\
-           or edges is not None:
-            self.topology = {"vertices": vertices if vertices else [],
-                             "edges": edges if edges else []}
-        if vertices or edges:
-            self.topology = {"vertices": vertices if vertices else [],
-                             "edges": edges if edges else []}
+        if nodes is not None\
+           or links is not None:
+            self.topology = {"nodes": nodes if nodes else [],
+                             "links": links if links else []}
         else:
             try:
                 self.topology = graph.__getattribute__(graph, topology)
@@ -65,11 +74,11 @@ class graph(FlangeTree):
             topology = self.topology
 
         vertices = [(name, {"id": name, "_type": "node"}) 
-                    for name in topology["vertices"]]
+                    for name in topology["nodes"]]
         vertices.extend([(vertex, {"id": vertex, "_type": "link"}) 
-                         for vertex in topology["edges"]])
+                         for vertex in topology["links"]])
         edges = [((src, (src,dst)), ((src,dst), dst)) 
-                 for (src, dst) in topology["edges"]]
+                 for (src, dst) in topology["links"]]
 
         g = nx.DiGraph()
 
