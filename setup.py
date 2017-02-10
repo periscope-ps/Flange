@@ -1,20 +1,43 @@
+from __future__ import print_function
+from setuptools import setup, Command
 import os
-from setuptools import setup, find_packages
 
-# Utility function to read the README file.
-# Used for the long_description.  It's nice, because now 1) we have a top level
-# README file and 2) it's easier to type in the README file than to put a raw
-# string in below ...
-def read(fname):
-    return open(os.path.join(os.path.dirname(__file__), fname)).read()
+import sys
+
+version = "0.1.dev0"
+
+sys.path.append(".")
+if sys.version_info[0] < 3:
+    print("------------------------------")
+    print("Must use python 3.0 or greater", file=sys.stderr)
+    print("Found python verion ", sys.version_info, file=sys.stderr)
+    print("Installation aborted", file=sys.stderr)
+    print("------------------------------")
+    sys.exit()
+
+class tester(Command):
+    description = "Run unittests for Flanged"
+    user_options = []
+    
+    def initialize_options(self):
+        pass
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        import flanged.test.runtests as tests
+        return tests.main()
 
 setup(
-    name = "Flange",
-    version = "0.0.1",
-    author = "Joseph Cottam",
-    author_email = "jcottam@indiana.edu",
-    description = "Declaratively program networks",
-    packages=find_packages(),
-    test_suite="tests",
-    install_requires=["networkx", "matplotlib"]
+    name="flanged",
+    version=version,
+    packages=["flanged", "flanged.handlers", "flanged.tests"],
+    author="Joseph Cottam, Jeremy Musser",
+    license="http://www.apache.org/licenses/LICENSE-2.0",
+    
+    install_requires=[
+        "falcon",
+        "bson",
+    ],
+    cmdclass={'test': tester },
 )
