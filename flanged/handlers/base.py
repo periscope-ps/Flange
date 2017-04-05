@@ -17,7 +17,12 @@ class _BaseHandler(object):
     def do_auth(self, req, resp, resource, params):
         if resource._conf.get('auth', False):
             if not req.auth:
-                raise falcon.HTTPMissingHeader("Authorization")
+                raise falcon.HTTPMissingHeader("Missing OAuth token", "Authorization")
+
+            try:
+                (bearer, token) = req.auth.split(' ')
+                if bearer != "OAuth":
+                    raise falcon.HTTPInvalidHeader("Malformed Authorization header", "Authorization")
                 
             bearer = req.auth.split()
             if len(bearer) != 2:
@@ -59,7 +64,7 @@ class SSLCheck(object):
         self._conf = conf
     
     def process_request(self, req, resp):
-        if req.protocol == 'https' and self._conf.get('auth', False):
+        if req.protocol != 'https':
             raise falcon.HTTPBadRequest(title='400 HTTPS required', 
                                         description='Flanged requires an SSL connection to authenticate requests')
         

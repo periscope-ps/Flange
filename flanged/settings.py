@@ -1,5 +1,5 @@
 
-TOKEN_TTL = 300
+TOKEN_TTL = 3600
 MIME = {
     'HTML': 'text/html',
     'JSON': 'application/json',
