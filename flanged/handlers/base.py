@@ -14,28 +14,31 @@ class _BaseHandler(object):
         self._db = db
 
     @classmethod
-    def do_auth(req, resp, resource, params):
-        if getattr(resource._conf, 'auth', False):
+    def do_auth(self, req, resp, resource, params):
+        if resource._conf.get('auth', False):
             if not req.auth:
                 raise falcon.HTTPMissingHeader("Authorization")
                 
-            bearer = req.auth.split(' ')
+            bearer = req.auth.split()
             if len(bearer) != 2:
                 raise falcon.HTTPInvalidHeader("Malformed Authorization header")
             
-            parts = req.auth.split('.')
+            parts = bearer[1].split('.')
+            if len(parts) != 3:
+                raise falcon.HTTPUnauthorized("Token is not a valid JWT token")
             itok = ".".join(parts[:2])
             sig = hmac.new(resource._conf.get('secret', "there is no secret").encode('utf-8'), itok.encode('utf-8'), digestmod=hashlib.sha256).digest()
             if not hmac.compare_digest(base64.urlsafe_b64encode(sig), parts[2].encode('utf-8')):
                 raise falcon.HTTPForbidden()
                 
-            if json.loads(parts[0])["exp"] < int(time.time()):
+            payload = json.loads(base64.urlsafe_b64decode(parts[1]).decode('utf-8'))
+            if payload["exp"] < int(time.time()):
                 raise falcon.HTTPForbidden(description="Token has expired")
                 
-            if not resource.authorize(json.loads(parts[1])):
+            if not resource.authorize(payload):
                 raise falcon.HTTPForbidden(description="User does not have permission to use this function")
                 
-            self._usr = json.loads(parts[1]["iss"])
+            self._usr = payload["iss"]
             
     @classmethod
     def encode_response(self, req, resp, resource):

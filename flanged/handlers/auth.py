@@ -14,14 +14,15 @@ class AuthHandler(_BaseHandler):
     @falcon.after(_BaseHandler.encode_response)
     @get_body
     def on_post(self, req, resp, body):
-        if "uname" not in body: raise falcon.HTTPMissingParam("uname")
-        if "pwd" not in body:   raise falcon.HTTPMissingParam("pwd")
+        if not req.auth:
+            raise falcon.HTTPUnauthorized("No username or password presented")
         
+        auth = base64.b64decode(req.auth.split()[1]).decode('utf-8').split(':')
         header = { "alg": "HS256", "typ": "JWT" }
         payload = { 
-            "iss": body["uname"], 
+            "iss": auth[0],
             "exp": int(time.time()) + settings.TOKEN_TTL,
-            "prv": ",".join(self._db.get_usr(body['uname'], body['pwd']))
+            "prv": ",".join(self._db.get_usr(auth[0], auth[1]))
         }
         tok = self._generate_token(header, payload)
         
