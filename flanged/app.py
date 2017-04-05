@@ -57,6 +57,12 @@ def main():
     ## TODO ##
     # Self host server
     app = _get_app()
+    
+    from wsgiref.simple_server import make_server
+    server = make_server('localhost', 8000, app)
+
+    print("Listening on localhost:8000")
+    server.serve_forever()
 
 if __name__ == "__main__":
     main()
