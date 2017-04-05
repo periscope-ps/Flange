@@ -9,13 +9,13 @@ class ValidateHandler(_BaseHandler):
     @get_body
     def on_post(self, req, resp, body):
         if "changes" not in body:
-            raise falcon.HTTPInvalidParam("Compilation request requires a program field")
+            raise falcon.HTTPInvalidParam("Compilation request requires a program field", "changes")
         
         resp.body = self.validate(body["changes"])
         resp.status = falcon.HTTP_200
 
-    def authorize(self, payload):
-        return True if "v" in payload["prv"].split(',') else False
+    def authorize(self, attrs):
+        return True if "v" in attrs else False
 
     def validate(self, graph):
         #TODO:

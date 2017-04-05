@@ -28,7 +28,7 @@ class SketchHandler(_BaseHandler):
         resp.body = result
         resp.status = falcon.HTTP_200
     
-    def authorize(self, payload):
-        self._other = True if "ls" in payload["prv"].split(',') else False
+    def authorize(self, attrs):
+        self._other = True if "ls" in attrs else False
         return True
     
