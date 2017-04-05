@@ -57,7 +57,7 @@ class CompileHandler(_BaseHandler):
     @get_body
     def on_post(self, req, resp, body):
         if "program" not in body:
-            raise falcon.HTTPInvalidParam("Compilation request requires a program field")
+            raise falcon.HTTPInvalidParam("Compilation request requires a program field", "program")
         
         if "flags" in body:
             # Optional compiler flags
@@ -66,8 +66,8 @@ class CompileHandler(_BaseHandler):
         resp.body = self.compute(body["program"])
         resp.status = falcon.HTTP_200
 
-    def authorize(self, payload):
-        return True if "x" in payload["prv"].split(',') else False
+    def authorize(self, attrs):
+        return True if "x" in attrs else False
         
     def compute(self, prog):
         #TODO: CALL FLANGE HERE

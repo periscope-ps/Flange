@@ -14,14 +14,18 @@ class AuthHandler(_BaseHandler):
     @falcon.after(_BaseHandler.encode_response)
     @get_body
     def on_post(self, req, resp, body):
-        if "uname" not in body: raise falcon.HTTPMissingParam("uname")
-        if "pwd" not in body:   raise falcon.HTTPMissingParam("pwd")
-        
+        try:
+            token = req.get_header('Authorization')
+            up = base64.b64decode(token.split('Basic ')[1]).decode('utf-8')
+            (user, passwd) = up.split(':')
+        except:
+            raise falcon.HTTPInvalidHeader("Could not perform HTTP-BASIC Auth", "Authorization")
+            
         header = { "alg": "HS256", "typ": "JWT" }
         payload = { 
-            "iss": body["uname"], 
+            "iss": user, 
             "exp": int(time.time()) + settings.TOKEN_TTL,
-            "prv": ",".join(self._db.get_usr(body['uname'], body['pwd']))
+            "prv": ",".join(self._db.get_usr(user, passwd))
         }
         tok = self._generate_token(header, payload)
         

@@ -44,7 +44,8 @@ def _get_app():
     
     ensure_ssl = SSLCheck(conf)
     
-    app = falcon.API(middleware=[ensure_ssl])
+    #app = falcon.API(middleware=[ensure_ssl])
+    app = falcon.API()
     app.add_route('/c', compiler)
     app.add_route('/a', auth)
     app.add_route('/v', validator)
