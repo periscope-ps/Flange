@@ -57,7 +57,7 @@ class CompileHandler(_BaseHandler):
     @get_body
     def on_post(self, req, resp, body):
         if "program" not in body:
-            raise falcon.HTTPInvalidParam("program", "Compilation request requires a program field")
+            raise falcon.HTTPInvalidParam("Compilation request requires a program field", "program")
         if "flags" in body:
             # Optional compiler flags
             pass

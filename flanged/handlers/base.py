@@ -18,17 +18,14 @@ class _BaseHandler(object):
         if resource._conf.get('auth', False):
             if not req.auth:
                 raise falcon.HTTPMissingHeader("Missing OAuth token", "Authorization")
-
-            try:
-                (bearer, token) = req.auth.split(' ')
-                if bearer != "OAuth":
-                    raise falcon.HTTPInvalidHeader("Malformed Authorization header", "Authorization")
-                
-            bearer = req.auth.split()
-            if len(bearer) != 2:
-                raise falcon.HTTPInvalidHeader("Malformed Authorization header")
             
-            parts = bearer[1].split('.')
+            try:
+                bearer, token = req.auth.split()
+                assert(bearer == "OAuth")
+            except:
+                raise falcon.HTTPInvalidHeader("Malformed Authorization header", "Authorization")
+            
+            parts = token.split('.')
             if len(parts) != 3:
                 raise falcon.HTTPUnauthorized("Token is not a valid JWT token")
             itok = ".".join(parts[:2])
@@ -40,7 +37,7 @@ class _BaseHandler(object):
             if payload["exp"] < int(time.time()):
                 raise falcon.HTTPForbidden(description="Token has expired")
                 
-            if not resource.authorize(payload):
+            if not resource.authorize(payload['prv']):
                 raise falcon.HTTPForbidden(description="User does not have permission to use this function")
                 
             self._usr = payload["iss"]
