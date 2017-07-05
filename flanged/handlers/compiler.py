@@ -61,7 +61,7 @@ class CompileHandler(_BaseHandler):
         if "flags" in body:
             # Optional compiler flags
             pass
-        
+
         resp.body = self.compute(body["program"])
         resp.status = falcon.HTTP_200
 

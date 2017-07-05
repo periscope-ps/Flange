@@ -18,7 +18,7 @@ class _Database(object):
         for k, v in self._usrs.items():
             if k == usr:
                 if v.get("pwd", "") != pwd:
-                    raise falcon.HTTPForbidden("Incorrect password")
+                    raise falcon.HTTPForbidden("Incorrect password", "Authentication failed")
             
                 return v["prv"]
         raise falcon.HTTPForbidden("Unknown username")
