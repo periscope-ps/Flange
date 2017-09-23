@@ -31,7 +31,7 @@ class tester(Command):
 setup(
     name="flanged",
     version=version,
-    packages=["flanged", "flanged.handlers", "flanged.tests"],
+    packages=["flange", "flange.backend", "flanged", "flanged.handlers", "flanged.tests"],
     author="Joseph Cottam, Jeremy Musser",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     
