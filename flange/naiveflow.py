@@ -2,7 +2,7 @@ from flange import settings
 from flange import primitives as prim
 from lace.logging import trace
 from unis import Runtime
-from unis.models import Path
+from unis.models import Path, Node
 
 rt = None
 
@@ -161,9 +161,8 @@ def _build_env(program):
     return env
 
 @trace.debug("naiveflow")
-def _find_routes(source, sink, attrs):
+def _find_routes(source, sink):
     fringe = [[source]]
-    visited = [source]
     while fringe:
         origin = fringe.pop(0)
         for port in origin[-1].ports:
@@ -184,11 +183,10 @@ def _find_routes(source, sink, attrs):
                     path.append(path[-1].endpoints[0])
                     path.append(path[-1].node)
                 node = path[-1]
-            if node and node not in visited:
-                visited.append(node)
+            if node:
                 if node == sink:
                     yield path
-                else:
+                elif len(path) < settings.MAX_DEPTH:
                     fringe.append(path)
     raise ResolutionError("No acceptable routes selected")
 
@@ -197,17 +195,37 @@ def _exists(obj):
     if isinstance(obj, prim.Node):
         candidates = rt.nodes.where(obj.__fl_query__)
         try:
-            return [obj.__exists__(candidates)]
+            return [next(obj.__exists__(candidates))]
         except StopIteration:
             raise ResolutionError("Node does not exist")
     if isinstance(obj, prim.Flow):
-        flows = []
-        nodes = list(map(lambda x: _exists(x)[0], obj.__fl_nodes__))
         # This is the hard part
-        for i, _ in enumerate(nodes[:-1]):
-            path = Path({"directed": True, "hops": obj.__exists__(_find_routes(nodes[i], nodes[i+1], obj.__fl_hops__[i]))})
-            flows.append(path)
-            
+        flows = []
+        i = 0
+        bookends = [0, 0]
+        while i < len(obj.__fl_nodes__) - 1:
+            if not isinstance(obj.__fl_nodes__[i+1], prim.Function):
+                bookends[1] = i + 1
+                pair = (_exists(obj.__fl_nodes__[bookends[0]])[0], _exists(obj.__fl_nodes__[bookends[1]])[0])
+                paths = obj.__exists__(_find_routes(*pair))
+                for path in paths:
+                    _good = True
+                    nodes = list(filter(lambda x: isinstance(x, Node), path))
+                    for func in obj.__fl_nodes__[bookends[0]+1:bookends[1]]:
+                        _good = False
+                        for _ in func.__exists__(nodes):
+                            _good = True
+                            break
+                        if not _good:
+                            break
+                    if _good:
+                        flows.append(Path({"directed": True, "hops": path}))
+                        break
+                bookends[0] = bookends[1]
+            i += 1
+        if isinstance(obj.__fl_nodes__[i], prim.Function):
+            raise SyntaxError("Flow may not end in a function")
+        
         return flows
             
 
