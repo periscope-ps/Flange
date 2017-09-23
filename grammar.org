@@ -1,0 +1,67 @@
+
+* Language
+** Terminals
+  num    = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+  char   = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" ; 
+  sym    = "!" | "@" | "#" | "$" |"%" | "^" | "*" | "-" | "_";
+  string = ('"', (" " | num | char | sym)*, '"') | ("'", (" " | num | char | sym)*, "'")
+  bool   = "True" | "False"
+  none   = "None"
+  
+** Logic
+   logic      = (logic, [" "]+, "or", [" "]+) | logic_and
+   logic_and  = (logic_and, [" "]+, "and", [" "]+ | logic_comp
+   logic_flow = (expr, flow_op, expr) | logic_comp
+   flow_op    = [" "]*, "~", expr, ">", [" "]*
+   logic_comp = (logic_comp, comp_op, logic_comp) | math_add
+   comp_op    = [" "]*, "==" | "!=" | "<" | "<=" | ">" | ">=", [" "]*
+   math_add   = (math_add, add_op, math_add) | math_mult
+   add_op     = [" "]*, "+" | "-", [" "]*
+   math_mult  = (math_mult, mult_op, math_mult) | unary
+   mult_op    = [" "]*, "*" | "/" | "%", [" "]*
+   unary      = [" "]*, "not", [" "]*, unary | expr
+   
+** Types
+   var   = ("_" | sym | char), (sym | char | num)*
+   index = (var | func | list), "[", expr, "]"
+   list  = "[", ([" "], expr, [" "], ",")*, [" "], expr, [" "], "]"
+   path = expr, ([" "], ":", [" "], expr)+
+   query = "{", [" "]*, logic, [" "]*, "}"
+   
+** Structure
+   program    = (let | logic | decl)+
+   let        = "let ", var, [" "], "=", [" "], expr
+   func       = var, "(", [(var | expr)*, (var | expr)], ")"
+   expr       = logic | var | index | string | bool | num | none | func | path | flow | query | list
+   
+** Compositions
+   exists = "exists ", logic
+   decl   = exists
+
+
+* AST
+** Terminals
+   var    = [ "var", <string> ]
+   num    = [ "number", [0-9]+ ]
+   string = [ "string", "<string>" ]
+   none   = [ "empty", <None> ]   
+   
+** Program
+   program = [ "program", (let | compare | decl)* ]
+   compare = [ ("==" | ">" | ">=" | "<" | "<=" | "!="), comp, comp ]
+   comp    = logic | not | list | func | math | path | var | string | bool | none
+   let     = [ "let", var, comp ]
+   logic   = [ ("and" | "or"), comp, comp ]
+   not     = [ "not", comp ]
+   list    = [ "list",  comp* ]
+   func    = [ "app", <func>, [ comp* ] ]
+   math    = [ ("+" | "-" | "/" | "*"), comp, comp ]
+   
+** Graph
+   node = [ "node", logic* ]
+   path = [ "path", logic*, (node | var), (node | path | var) ]
+   flow = [ "flow", logic*, (node | var), (node | flow | var) ]
+   
+** Compositions
+   decl = [ "exists", (var | node | flow | path) ]
+   
