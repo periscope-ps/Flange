@@ -108,7 +108,9 @@ def _expr(inst, lineno):
     else:
         if inst[0] == "{":
             if inst[-1] == "}":
-                return ("query", _logic(inst[1:-1], lineno))
+                if inst[2] != ":":
+                    raise SyntaxError("Bad syntax: missing colon [line {}]".format(lineno))
+                return ("query", _expr(inst[1], lineno), _logic(inst[3:-1], lineno))
             else:
                 raise SyntaxError("Unmatched braces in query [line {}]".format(lineno))
         if inst[0] == "(":

@@ -4,6 +4,8 @@ from lace.logging import trace
 from unis import Runtime
 from unis.models import Path, Node
 
+from copy import deepcopy
+
 rt = None
 
 class DependencyError(Exception):
@@ -12,7 +14,7 @@ class ResolutionError(Exception):
     pass
 
 @trace.debug("naiveflow")
-def _build_query(q):
+def _build_query(name, q, env):
     def f(x):
         ops = {
             "and":    lambda q: _f(q[1]) and _f(q[2]),
@@ -31,7 +33,7 @@ def _build_query(q):
             "%":      lambda q: _f(q[1]) % _f(q[2]),
             "index":  lambda q: _f(q[1])[_f(q[2])],
             "attr":   lambda q: hasattr(_f(q[1]), q[2][1]) and getattr(_f(q[1]), q[2][1]),
-            "var":    lambda q: hasattr(x, q[1]) and getattr(x, q[1]),
+            "var":    lambda q: x if q[1] == name else env[q[1]],
             "bool":   lambda q: q[1] == "True",
             "number": lambda q: q[1],
             "string": lambda q: q[1],
@@ -51,7 +53,7 @@ def _build_func(inst):
 @trace.debug("naiveflow")
 def _build_node(inst, env):
     node = prim.Node()
-    node.__fl_query__ = _build_query(inst[1])
+    node.__fl_query__ = _build_query(inst[1][1], inst[2], env)
     return node
     
 @trace.debug("naiveflow")
@@ -121,9 +123,9 @@ def _resolve(inst, env):
 @trace.debug("naiveflow")
 def _build_env(program):
     def _find_deps(inst):
-        if isinstance(inst, tuple):
+        if inst and isinstance(inst, tuple):
             if inst[0] == "query":
-                return []
+                return _find_deps(inst[3:])
             if inst[0] == "var":
                 return [inst[1]]
             else:
@@ -134,7 +136,7 @@ def _build_env(program):
                         deps.extend(_new_deps)
                 return deps
         else:
-            return None
+            return []
     deps = {}
     env = {}
     for i, inst in enumerate(program):

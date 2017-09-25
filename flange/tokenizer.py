@@ -53,7 +53,7 @@ def run(program):
         _nospace = _tokenize(token, "(\s+)")
         result.append([])
         for itok in _nospace:
-            result[-1].extend(_tokenize(itok, "(\||&|=|!=|<|>|{|}|\[|\]|\+|-|/|\*|~|\(|\)|\.|,)"))
+            result[-1].extend(_tokenize(itok, "(\||&|=|!=|<|>|{|}|\[|\]|\+|-|/|\*|~|\(|\)|\.|,|:)"))
         result[-1] = _merge(result[-1], lnum)
         result[-1] = _merge_str(result[-1], lnum)
         result[-1] = _remove_ws(result[-1])
