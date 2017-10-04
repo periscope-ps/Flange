@@ -83,7 +83,7 @@ def _attr(inst, lineno):
     for start in reversed(range(len(inst))):
         if not _parens.isNested(inst[start], lineno):
             if inst[start] == ".":
-                return ("attr", _logic(inst[:start], lineno), _logic(inst[start+1:], lineno))
+                return ("attr", _logic(inst[start+1:], lineno), _logic(inst[:start], lineno))
     return _expr(inst, lineno)
 
 # Expr
@@ -108,9 +108,12 @@ def _expr(inst, lineno):
     else:
         if inst[0] == "{":
             if inst[-1] == "}":
-                if inst[2] != ":":
-                    raise SyntaxError("Bad syntax: missing colon [line {}]".format(lineno))
-                return ("query", _expr(inst[1], lineno), _logic(inst[3:-1], lineno))
+                if inst[2] == "|":
+                    return ("query", inst[1], None, _logic(inst[3:-1], lineno))
+                elif inst[2] == "in" and inst[4] == "|":
+                    return ("query", inst[1], _logic([inst[3]], lineno), _logic(inst[5:-1], lineno))
+                else:
+                    raise SyntaxError("Malformed query [line {}]".format(lineno))
             else:
                 raise SyntaxError("Unmatched braces in query [line {}]".format(lineno))
         if inst[0] == "(":
@@ -166,13 +169,18 @@ def _let(inst, lineno):
 # Decl
 @trace.debug("ast")
 def _decl(inst, lineno):
+    op = {
+        "exists": ("exists", _logic(inst[1:], lineno)),
+        "forall": ("forall", _logic(inst[1:], lineno))
+    }
+    return op[inst[0]]
     return ("exists", _logic(inst[1:], lineno))
 
 @trace.debug("ast")
 def _program(inst, lineno):
     if inst[0] == "let":
         return _let(inst, lineno)
-    if inst[0] in ["exists"]:
+    if inst[0] in ["exists", "forall"]:
         return _decl(inst, lineno)
     else:
         return _logic(inst, lineno)

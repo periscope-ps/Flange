@@ -1,124 +1,143 @@
-from flange import settings
-from flange import primitives as prim
-from lace.logging import trace
-from unis import Runtime
-from unis.models import Path, Node
+import flange.primitives as prim
 
-from copy import deepcopy
+from flange import utils
+from flange.exceptions import DependencyError, ResolutionError, CompilerError
+
+
+from lace.logging import trace
 
 rt = None
 
-class DependencyError(Exception):
-    pass
-class ResolutionError(Exception):
-    pass
 
 @trace.debug("naiveflow")
-def _build_query(name, q, env):
+def _build_query(token, q, env):
     def f(x):
+        def _attr(q):
+            if q[2][0] == "var" and q[2][1] == token:
+                return hasattr(x, q[1][1]) and getattr(x, q[1][1])
+            else:
+                return hasattr(_f(q[2]), q[1][1]) and getattr(_f(q[2]), q[1][1])
         ops = {
-            "and":    lambda q: _f(q[1]) and _f(q[2]),
-            "or":     lambda q: _f(q[1]) or _f(q[2]),
-            "not":    lambda q: not _f(q[1]),
-            "==":     lambda q: _f(q[1]) == _f(q[2]),
-            "!=":     lambda q: _f(q[1]) != _f(q[2]),
-            ">":      lambda q: _f(q[1]) > _f(q[2]),
-            ">=":     lambda q: _f(q[1]) >= _f(q[2]),
-            "<":      lambda q: _f(q[1]) < _f(q[2]),
-            "<=":     lambda q: _f(q[1]) <= _f(q[2]),
-            "+":      lambda q: _f(q[1]) + _f(q[2]),
-            "-":      lambda q: _f(q[1]) - _f(q[2]),
-            "/":      lambda q: _f(q[1]) / _f(q[2]),
-            "*":      lambda q: _f(q[1]) * _f(q[2]),
-            "%":      lambda q: _f(q[1]) % _f(q[2]),
-            "index":  lambda q: _f(q[1])[_f(q[2])],
-            "attr":   lambda q: hasattr(_f(q[1]), q[2][1]) and getattr(_f(q[1]), q[2][1]),
-            "var":    lambda q: x if q[1] == name else env[q[1]],
-            "bool":   lambda q: q[1] == "True",
-            "number": lambda q: q[1],
-            "string": lambda q: q[1],
-            "empty":  lambda q: None
+            "and":      lambda q: _f(q[1]) and _f(q[2]),
+            "or":       lambda q: _f(q[1]) or _f(q[2]),
+            "not":      lambda q: not _f(q[1]),
+            "==":       lambda q: _f(q[1]) == _f(q[2]),
+            "!=":       lambda q: _f(q[1]) != _f(q[2]),
+            ">":        lambda q: _f(q[1]) > _f(q[2]),
+            ">=":       lambda q: _f(q[1]) >= _f(q[2]),
+            "<":        lambda q: _f(q[1]) < _f(q[2]),
+            "<=":       lambda q: _f(q[1]) <= _f(q[2]),
+            "+":        lambda q: _f(q[1]) + _f(q[2]),
+            "-":        lambda q: _f(q[1]) - _f(q[2]),
+            "/":        lambda q: _f(q[1]) / _f(q[2]),
+            "*":        lambda q: _f(q[1]) * _f(q[2]),
+            "%":        lambda q: _f(q[1]) % _f(q[2]),
+            "index":    lambda q: _f(q[1])[_f(q[2])],
+            "attr":     _attr,
+            "var":      lambda q: env[q[1]].__raw__(),
+            "bool":     lambda q: q[1] == "True",
+            "number":   lambda q: q[1],
+            "string":   lambda q: q[1],
+            "empty":    lambda q: None
         }
         def _f(q):
-            return ops[q[0]](q)
+            result = ops[q[0]](q)
+            return result
         return _f(q)
     return f
 
 @trace.debug("naiveflow")
 def _build_func(inst):
-    func = prim.Function(inst[1])
-    func.__fl_query__ = lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes")
+    func = prim.function(inst[1])
     return func
 
 @trace.debug("naiveflow")
 def _build_node(inst, env):
-    node = prim.Node()
-    node.__fl_query__ = _build_query(inst[1][1], inst[2], env)
+    node = prim.node(_build_query(inst[1], inst[3], env))
+    if inst[2]:
+        return node.__intersection__(_resolve(inst[2], env))
     return node
     
 @trace.debug("naiveflow")
-def _build_flow(inst, env):
+def _build_hops(inst, env):
     nodes = []
-    hops  = []
+    hops = []
     while inst[0] == "flow":
-        if inst[2][0] == "query":
-            nodes.append(_build_node(inst[2], env))
-        elif inst[2][0] == "var":
-            nodes.append(env.get(inst[2][1], _build_func(inst[2][1])))
-        else:
-            raise TypeError("Unknown type applied to flow")
+        node = _resolve(inst[2], env)
+        if not isinstance(node, prim.node):
+            raise TypeError("Flow cannot contain non-node elements")
+        nodes.append(_resolve(inst[2], env))
         hops.append(inst[1])
         inst = inst[3]
-    if inst[0] == "query":
-        nodes.append(_build_node(inst, env))
-    elif inst[0] == "var":
-        end = env.get(inst[1], _build_func(inst[1]))
-        if isinstance(end, prim.Node):
-            nodes.append(end)
-        else:
-            raise TypeError("Unknown type applied to flow")
-    flow = prim.Flow()
-    flow.__fl_hops__ = hops
-    flow.__fl_nodes__ = nodes
-    return flow
+    node = _resolve(inst, env)
+    if isinstance(node, prim.fl_list):
+        node = prim.func(node)
+    nodes.append(_resolve(inst, env))
+    return (nodes, hops)
+    
+@trace.debug("naiveflow")
+def _build_flow(inst, env):
+    nodes, hops = _build_hops(inst, env)
+    @trace.debug("flowgraph")
+    def _q():
+        for path, pnodes in utils.find_paths(nodes[0], nodes[-1]):
+            stack = list(nodes[1:-1])
+            for node in pnodes:
+                if stack:
+                    if node in stack[0].__fl_members__:
+                        stack.pop(0)
+            if not stack:
+                yield path
+    return prim.flow(_q)
     
 @trace.debug("naiveflow")
 def _resolve(inst, env):
     def dyad(f):
         return lambda: f(_resolve(inst[1], env), _resolve(inst[2], env))
     def monad(f):
-        return lambda: f(_resolve(inst[1]))
+        return lambda: f(_resolve(inst[1], env))
     def _nimp(msg):
-        raise NotImplemented(msg)
+        def _f():
+            raise NotImplemented(msg)
+        return _f
+    def _badinst(msg):
+        def _f():
+            raise SyntaxError("Bad Syntax: Invalid use of instruction - {}".format(msg))
+        return _f
     ops = {
-        "+": dyad(lambda x,y: x + y),
-        "-": dyad(lambda x,y: x - y),
-        "/": dyad(lambda x,y: x / y),
-        "*": dyad(lambda x,y: x / y),
-        "%": dyad(lambda x,y: x % y),
-        "or": dyad(lambda x,y: x or y),
-        "and": dyad(lambda x,y: x and y),
+        "+": dyad(lambda x,y: x.__add__(y)),
+        "-": dyad(lambda x,y: x.__sub__(y)),
+        "/": dyad(lambda x,y: x.__div__(y)),
+        "*": dyad(lambda x,y: x.__mult__(y)),
+        "%": dyad(lambda x,y: x.__mod__(y)),
+        "or": dyad(lambda x,y: x.__union__(y)),
+        "and": dyad(lambda x,y: x.__intersection__(y)),
+        "not": monad(lambda x: x.__complement__()),
         "==": dyad(lambda x,y: x == y),
         "!=": dyad(lambda x,y: x != y),
         "<": dyad(lambda x,y: x < y),
         "<=": dyad(lambda x,y: x <= y),
         ">": dyad(lambda x,y: x > y),
         ">=": dyad(lambda x,y: x >= y),
-        "not": monad(lambda x: not x),
-        "app": _nimp,
-        "index": dyad(lambda x,y: x[y]),
-        "attr": _nimp,
+        "app": _nimp("Function application"),
+        "index": dyad(lambda x,y: x.__getitem__(y)),
+        "attr": _nimp("Class attributes"),
         "var": lambda: env.get(inst[1], _build_func(inst)),
-        "bool": lambda: inst[1] == "True",
-        "number": lambda: inst[1],
-        "string": lambda: inst[1],
-        "empty": lambda: None,
+        "bool": lambda: prim.boolean(inst[1] == "True"),
+        "number": lambda: prim.number(inst[1]),
+        "string": lambda: prim.string(inst[1]),
+        "empty": lambda: _nimp("None"),
         "query": lambda: _build_node(inst, env),
         "flow": lambda: _build_flow(inst, env),
-        "list": lambda: [_resolve(x, env) for x in _list[1:]],
-        "path": _nimp
+        "list": lambda: prim.fl_list([_resolve(x, env) for x in _list[1:]]),
+        "exists": lambda: prim.exists(_resolve(inst[1], env)),
+        "forall": lambda: prim.forall(_resolve(inst[1], env)),
+        "path": _nimp("Paths"),
     }
-    return ops[inst[0]]()
+    try:
+        return ops[inst[0]]()
+    except KeyError:
+        raise SyntaxError("Bad Syntax: Invalid use of instruction - {}".format(inst[0]))
 
 @trace.debug("naiveflow")
 def _build_env(program):
@@ -159,96 +178,26 @@ def _build_env(program):
                 del deps[k]
         if not closer:
             raise DependencyError("Co-dependent variables found, cannot resolve")
-                
-    return env
-
-@trace.debug("naiveflow")
-def _find_routes(source, sink):
-    fringe = [[source]]
-    while fringe:
-        origin = fringe.pop(0)
-        for port in origin[-1].ports:
-            node = None
-            path = list(origin)
-            path.append(port)
-            path.append(port.link)
-            if path[-1].directed:
-                if path[-1].endpoints.source == port:
-                    path.append(path[-1].endpoints.sink)
-                    path.append(path[-1].node)
-                    node = path[-1]
-            else:
-                if path[-1].endpoints[0] == port:
-                    path.append(path[-1].endpoints[1])
-                    path.append(path[-1].node)
-                else:
-                    path.append(path[-1].endpoints[0])
-                    path.append(path[-1].node)
-                node = path[-1]
-            if node:
-                if node == sink:
-                    yield path
-                elif len(path) < settings.MAX_DEPTH:
-                    fringe.append(path)
-    raise ResolutionError("No acceptable routes selected")
-
-@trace.debug("naiveflow")
-def _exists(obj):
-    if isinstance(obj, prim.Node):
-        candidates = rt.nodes.where(obj.__fl_query__)
-        try:
-            return [next(obj.__exists__(candidates))]
-        except StopIteration:
-            raise ResolutionError("Node does not exist")
-    if isinstance(obj, prim.Flow):
-        # This is the hard part
-        flows = []
-        i = 0
-        bookends = [0, 0]
-        while i < len(obj.__fl_nodes__) - 1:
-            if not isinstance(obj.__fl_nodes__[i+1], prim.Function):
-                bookends[1] = i + 1
-                pair = (_exists(obj.__fl_nodes__[bookends[0]])[0], _exists(obj.__fl_nodes__[bookends[1]])[0])
-                paths = obj.__exists__(_find_routes(*pair))
-                for path in paths:
-                    _good = True
-                    nodes = list(filter(lambda x: isinstance(x, Node), path))
-                    for func in obj.__fl_nodes__[bookends[0]+1:bookends[1]]:
-                        _good = False
-                        for _ in func.__exists__(nodes):
-                            _good = True
-                            break
-                        if not _good:
-                            break
-                    if _good:
-                        flows.append(Path({"directed": True, "hops": path}))
-                        break
-                bookends[0] = bookends[1]
-            i += 1
-        if isinstance(obj.__fl_nodes__[i], prim.Function):
-            raise SyntaxError("Flow may not end in a function")
-        
-        return flows
             
+    return env
 
 @trace.info("naiveflow")
 def run(program, ext_rt=None):
-    global rt
-    if not ext_rt:
-        rt = Runtime(settings.SOURCE_HOSTS)
-    else:
-        rt = ext_rt
-    flows = []
+    results = []
     env = _build_env(program)
     for inst in program:
-        if inst[0] == "exists":
-            flows.extend(_exists(_resolve(inst[1], env)))
-    
-    return flows
+        if inst[0] != "let":
+            res = _resolve(inst, env)
+            if hasattr(res, "__resolve__"):
+                results.append(res)
+            else:
+                raise CompilerError("Top level operation was not resolvable")
+    return results
 
 
 if __name__ == "__main__":
     from pprint import pprint
+    from unis import Runtime
     from unis.models import Node, Port, Link
     rt = Runtime()
     test = [("exists", ("query", ("==", ("var", "name"), ("string", "blah"))))]
