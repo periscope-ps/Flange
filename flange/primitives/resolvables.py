@@ -96,11 +96,12 @@ class flow(_resolvable):
             for member in self.__fl_cache__:
                 yield member
         else:
-            self.__fl_cache__ = []
+            cache = []
             for member in self.__fl_query__():
                 member = set([uPath({"directed": True, "hops": member})])
-                self.__fl_cache__.append(member)
+                cache.append(member)
                 yield member
+            self.__fl_cache__ = cache
     
     def __union__(self, other):
         def _union():
@@ -126,10 +127,11 @@ class function(node):
             name = "_".join([x.name for x in name])
         self.name = name
     def __fl_init__(self, query):
-        self.__fl_members__ = self.__fl_rt__.nodes.where(lambda x: hasattr(x, "properties") and hasattr(x, "executes"))
+        self.__fl_members__ = self.__fl_rt__.nodes.where(lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes"))
         
     @trace.debug("Function")
     def __exists__(self, candidates):
         for node in candidates:
+            print("here")
             if node.properties.executes == "python":
                 yield node

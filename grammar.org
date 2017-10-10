@@ -15,14 +15,16 @@
    logic_or   = (logic, ws+, "or", ws+, logic) | logic_and
    logic_and  = (logic, ws+, "and", ws+, logic) | logic_flow | logic_comp
    logic_flow = (query, ws*, "~", ws*, query, ">", logic_flow) | query
-   logic_comp = (logic_comp, (ws*, ("==" | "!=" | "<" | "<=" | ">" | ">="), ws*), logic_comp) | unary
-   unary      = ws*, "not", ws*, logic | math_add
-   math_add   = (math_add, (ws*, "+" | "-", ws*), math_add) | math_mult
-   math_mult  = (math_mult, (ws*, "*" | "/" | "%", ws*), math_mult) | app
-   app        = app, "(", logic*, ")" | attr
-   attr       = (app, "[", ws*, logic, ws*, "]") | (app, ".", app) | query
-   query      = ("{", ws*, var, ws*, [ws, "in", ws+, query, ws*], "|", ws*, logic+, "}") | list
-   list       = "[", ws*, logic*, ws*, logic, "]"
+   logic_comp = (logic, (ws*, ("==" | "!=" | "<" | "<=" | ">" | ">="), ws*), logic) | logic_not
+   logic_not  = (ws*, "not", ws*, logic) | math_add
+   math       = ("(", math_add, ")") | math_add
+   math_add   = (math, (ws*, "+" | "-", ws*), math) | math_mult
+   math_mult  = (math, (ws*, "*" | "/" | "%", ws*), math) | app
+   app        = (app, "(", logic*, ")") | attr
+   index      = (app, "[", logic, "]") | attr
+   attr       = (app, ".", app) | query
+   query      = ("{", ws*, var, ws*, [ws, "in", ws+, query, ws*], "|", ws*, logic, "}") | ls
+   ls         = "[", ws*, logic*, ",", ws*, [logic], "]"
    terms      = var | num | string | bool | none
    
 ** Structure
@@ -36,27 +38,27 @@
    
 * AST
 ** Terminals
-   var    = [ "var", <string> ]
-   num    = [ "number", [0-9]+ ]
-   string = [ "string", "<string>" ]
-   none   = [ "empty", <None> ]   
+   var    = "(", "var", <string>, ")"
+   num    = "(", "number", [0-9]+, ")"
+   string = "(", "string", "<string>", ")"
+   none   = "(", "empty", <None>, ")"   
    
 ** Program
-   program = [ "program", (let | compare | decl)* ]
-   compare = [ ("==" | ">" | ">=" | "<" | "<=" | "!="), comp, comp ]
+   program = "(", "program", (let | compare | decl)*, ")"
+   compare = "(", ("==" | ">" | ">=" | "<" | "<=" | "!="), comp, comp, ")"
    comp    = logic | not | list | func | math | path | var | string | bool | none
-   let     = [ "let", var, comp ]
-   logic   = [ ("and" | "or"), comp, comp ]
-   not     = [ "not", comp ]
-   list    = [ "list",  comp* ]
-   func    = [ "app", <func>, [ comp* ] ]
-   math    = [ ("+" | "-" | "/" | "*"), comp, comp ]
+   let     = "(", "let", var, comp, ")"
+   logic   = "(", ("and" | "or"), comp, comp, ")"
+   not     = "(", "not", comp, ")"
+   list    = "(", "list",  comp*, ")"
+   func    = "(", "app", <func>, comp*, ")"
+   math    = "(", ("+" | "-" | "/" | "*"), comp, comp, ")"
    
 ** Graph
-   node = [ "node", logic* ]
-   path = [ "path", logic*, (node | var), (node | path | var) ]
-   flow = [ "flow", logic*, (node | var), (node | flow | var) ]
+   node = "(", "node", logic*, ")"
+   path = "(", "path", logic*, (node | var), (node | path | var), ")"
+   flow = "(", "flow", logic*, (node | var), (node | flow | var), ")"
    
 ** Compositions
-   decl = [ "exists", (var | node | flow | path) ]
+   decl = "(", ("exists" | "forall"), (var | node | flow | path), ")"
    

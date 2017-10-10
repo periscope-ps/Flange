@@ -1,6 +1,5 @@
 from lace.logging import trace
 
-# Logic
 @trace.debug("ast")
 class _pcount(object):
     def __init__(self, reverse=False):
@@ -15,85 +14,159 @@ class _pcount(object):
             if any(map(lambda x: x < 0, self.counts)):
                 raise SyntaxError("Unmatched brackets [line {}]".format(lineno))
         return any(map(lambda x: x != 0, self.counts))
-        
-@trace.debug("ast")
-def _split_on(inst, sep, cb1, cb2, lineno, tag=None):
-    _parens = _pcount()
-    if not inst:
-        raise SyntaxError("too few arguments [line {}]".format(lineno))
-    for i in range(len(inst)):
-        if not _parens.isNested(inst[i], lineno) and inst[i] in sep:
-            return (tag or inst[i], cb1(inst[:i], lineno), cb1(inst[i+1:], lineno))
-    return cb2(inst, lineno)
 
 @trace.debug("ast")
-def _logic(inst, lineno):
-    return _split_on(inst, ["or"], _logic, _logic_and, lineno)
+def _match_all(ops, inst, lno):
+    for head,op in ops.items():
+        resolver = _match(op, inst, lno)
+        if resolver:
+            return resolver(head)
+
 @trace.debug("ast")
-def _logic_and(inst, lineno):
-    return _split_on(inst, ["and"], _logic_and, _logic_flow, lineno)
+def _match_until(start, inst, name, lno):
+    parens = _pcount()
+    valid = True
+    for i in range(start, len(inst)):
+        if inst[i] == name and valid:
+            return (start, i)
+        valid = not parens.isNested(inst[i], lno)
+    return False
+
 @trace.debug("ast")
-def _logic_flow(inst, lineno):
-    _outer_parens = _pcount()
-    for start in range(len(inst)):
-        if not _outer_parens.isNested(inst[start], lineno) and inst[start] == "~":
-            _inner_parens = _pcount()
-            for end in range(start, len(inst)):
-                if not _inner_parens.isNested(inst[end], lineno) and inst[end] == ">":
-                    conds = _expr(inst[start+1:end], lineno) if start+1 != end else []
-                    return ("flow", conds, _logic(inst[:start], lineno), _logic(inst[end+1:], lineno))
-            raise SyntaxError("Unmatched flow arrow (missing >) [line {}]".format(lineno))
-    return _logic_comp(inst, lineno)
-@trace.debug("ast")
-def _logic_comp(inst, lineno):
-    return _split_on(inst, ["==", "!=", "<", "<=", ">", ">="], _logic_comp, _math_add, lineno)
-@trace.debug("ast")
-def _math_add(inst, lineno):
-    return _split_on(inst, ["+", "-"], _math_add, _math_mult, lineno)
-@trace.debug("ast")
-def _math_mult(inst, lineno):
-    return _split_on(inst, ["*", "/", "%"], _math_mult, _unary, lineno)
-@trace.debug("ast")
-def _unary(inst, lineno):
-    if inst[0] in ["not"]:
-        return ("not", _unary(inst[1:], lineno))
-    return _app(inst, lineno)
-@trace.debug("ast")
-def _app(inst, lineno):
-    _parens = _pcount(reverse=True)
-    if inst[-1] == ")":
-        for start in reversed(range(len(inst))):
-            if not _parens.isNested(inst[start], lineno):
-                if start != 0:
-                    return ("app", _logic(inst[:start], lineno), tuple(_list(inst[start+1:-1], lineno)))
+def _match(op, inst, lno):
+    tups = []
+    start = 0
+    for i, v in enumerate(op):
+        if isinstance(v, str):
+            if inst[start] != v:
+                return False
+            start += 1
+        else:
+            if len(op) != i + 1:
+                match = _match_until(start, inst, op[i+1], lno)
+                if match:
+                    tups.append((inst[match[0]:match[1]], v))
+                    start = match[1]
                 else:
-                    return _attr(inst, lineno)
-        raise SyntaxError("Unmatched parens in function [line {}]".format(lineno))
+                    return False
+            else:
+                tups.append((inst[start:], v))
+    
+    def _resolve(head):
+        result = [head]
+        for inst, op in tups:
+            result.append(op(inst, lno))
+        return tuple(result)
+        
+    return _resolve
 
-    return _attr(inst, lineno)
 @trace.debug("ast")
-def _attr(inst, lineno):
-    _parens = _pcount(reverse=True)
-    if inst[-1] == "]":
-        for start in reversed(range(len(inst))):
-            if not _parens.isNested(inst[start], lineno):
-                if start != 0:
-                    return ("index", _logic(inst[:start], lineno), _logic(inst[start+1:-1], lineno))
-    _parens = _pcount(reverse=True)
+def _csl(inst, lno):
+    parens = _pcount()
+    current = 0
+    results = []
+    for i, v in enumerate(inst):
+        if not parens.isNested(v, lno) and v == ',':
+            results.append(logic(inst[current:i], lno))
+            current = i+1
+    if inst:
+        results.append(logic(inst[current:], lno))
+    return results
+    
+def unnest(f):
+    def _f(inst, lno):
+        if inst[0] == "(" and inst[-1] == ")":
+            parens = _pcount()
+            for v in inst[:-1]:
+                if not parens.isNested(v, lno):
+                    return f(inst, lno)
+            return f(inst[1:-1], lno)
+        return f(inst, lno)
+    return _f
+
+@unnest
+@trace.info("ast")
+def logic(inst, lno):
+    return _match_all({"or": (logic, "or", logic)}, inst, lno) or logic_and(inst, lno)
+@trace.info("ast")
+def logic_and(inst, lno):
+    return _match_all({"and": (logic, "and", logic)}, inst, lno) or logic_flow(inst, lno)
+@trace.info("ast")
+def logic_flow(inst, lno):
+    resolver = _match((query, "~", ">", logic_flow), inst, lno)
+    if resolver:
+        flow = resolver("flow")
+        return ("flow", (), flow[1], flow[2])
+    resolver = _match((query, "~", query, ">", logic_flow), inst, lno)
+    if resolver:
+        flow = resolver("flow")
+        return ("flow", flow[2], flow[1], flow[3])
+    return logic_comp(inst, lno)
+@trace.info("ast")
+def logic_comp(inst, lno):
+    patterns = {
+        "==": (logic, "==", logic),
+        "!=": (logic, "!=", logic),
+        "<":  (logic, "<" , logic),
+        "<=": (logic, "<=", logic),
+        ">":  (logic, ">", logic),
+        ">=": (logic, ">=", logic)
+    }
+    return _match_all(patterns, inst, lno) or logic_not(inst, lno)
+@trace.info("ast")
+def logic_not(inst, lno):
+    return _match_all({"not": ("not", logic)}, inst, lno) or math_add(inst, lno)
+@unnest
+@trace.info("ast")
+def math_add(inst, lno):
+    return _match_all({ "+": (math_add, "+", math_add), "-": (math_add, "-", math_add) }, inst, lno) or math_mult(inst, lno)
+@trace.info("ast")
+def math_mult(inst, lno):
+    return _match_all({ "*": (math_add, "*", math_add), "/": (math_add, "/", math_add), "%": (math_add, "%", math_add) }, inst, lno) or app(inst, lno)
+@trace.info("ast")
+def app(inst, lno):
+    return _match_all({"app": (app, "(", _csl, ")")}, inst, lno) or index(inst, lno)
+@trace.info("ast")
+def index(inst, lno):
+    return _match_all({"index": (app, "[", logic, "]")}, inst, lno) or attr(inst, lno)
+@trace.info("ast")
+def attr(inst, lno):
+    parens = _pcount(reverse=True)
     for start in reversed(range(len(inst))):
-        if not _parens.isNested(inst[start], lineno):
+        if not parens.isNested(inst[start], lno):
             if inst[start] == ".":
-                return ("attr", _logic(inst[start+1:], lineno), _logic(inst[:start], lineno))
-    return _expr(inst, lineno)
+                return ("attr", logic(inst[start+1:], lno), logic(inst[:start], lno))
+    return query(inst, lno)
 
-# Expr
-@trace.debug("ast")
-def _expr(inst, lineno):
-    if not inst:
-        raise SyntaxError("Expected expression [line {}]".format(lineno))
-    elif len(inst) == 1:
+@trace.info("ast")
+def query(inst, lno):
+    resolver = _match(("{", var, "|", logic, "}"), inst, lno)
+    if resolver:
+        flow = resolver("query")
+        return ("query", flow[1][1], (), flow[2])
+    resolver = _match(("{", var, "in", query, "|", logic, "}"), inst, lno)
+    if resolver:
+        flow = resolver("query")
+        return ("query", flow[1], flow[2], flow[3])
+    return ls(inst, lno)
+
+@trace.info("ast")
+def ls(inst, lno):
+    parens = _pcount()
+    if inst[0] == '[' and inst[-1] == ']':
+        for v in inst[:-1]:
+            if not parens.isNested(v, lno):
+                return terms(inst, lno)
+        result = ["list"]
+        result.extend(_csl(inst[1:-1], lno))
+        return result
+    return terms(inst, lno)
+
+@trace.info("ast")
+def terms(inst, lno):
+    if len(inst) == 1:
         if inst[0] in ["True", "False"]:
-            return ("bool", inst[0])
+            return ("bool", inst[0] == "True")
         if inst[0] == "None":
             return ("empty", None)
         if inst[0].isdigit():
@@ -102,96 +175,37 @@ def _expr(inst, lineno):
             if inst[0][-1] == inst[0][0]:
                 return ("string", inst[0][1:-1])
             else:
-                raise SyntaxError("Unmatched quotes [line {}]".format(lineno))
+                raise SyntaxError("Unmatched quotes [line {}]".format(lno))
         else:
-            return ("var", inst[0])
-    else:
-        if inst[0] == "{":
-            if inst[-1] == "}":
-                if inst[2] == "|":
-                    return ("query", inst[1], None, _logic(inst[3:-1], lineno))
-                elif inst[2] == "in" and inst[4] == "|":
-                    return ("query", inst[1], _logic([inst[3]], lineno), _logic(inst[5:-1], lineno))
-                else:
-                    raise SyntaxError("Malformed query [line {}]".format(lineno))
-            else:
-                raise SyntaxError("Unmatched braces in query [line {}]".format(lineno))
-        if inst[0] == "(":
-            for i in range(len(inst)):
-                if inst[i] == ")":
-                    break
-            if inst[-1] == ")" and i == len(inst) - 1:
-                return _logic(inst[1:-1], lineno)
-        elif inst[0] == "[":
-            for i in range(len(inst)):
-                if inst[i] == "]":
-                    break
-            if inst[-1] == "]":
-                if i == len(inst) - 1:
-                    result = ["list"]
-                    result.extend(_list(inst[1:-1], lineno))
-                    return tuple(result)
-            else:
-                raise SyntaxError("Unmatched bracket in list [line {}]".format(lineno))
-        else:
-            for token in inst:
-                if token == ":":
-                    return _path(inst, lineno)
-                elif token in ["and", "or", "not", "+", "-", "*", "/", "%", "==", "!=", "<=", "<", ">", ">="]:
-                    return _logic(inst, lineno)
-        raise SyntaxError("Unknown Syntax [line {}] - {}".format(lineno, inst))
+            return var(inst, lno)
+    raise SyntaxError("Invalid syntax [line {}] - {}".format(lno, inst))
 
-@trace.debug("ast")
-def _path(inst, lineno):
-    for i in range(len(inst)):
-        if inst[i] == ":":
-            return ("path", _expr(inst[:i], lineno), _expr(inst[i+1:], lineno))
-@trace.debug("ast")
-def _list(inst, lineno):
-    start = 0
-    results = []
-    for i in range(len(inst)):
-        if inst[i] == ",":
-            results.append(_expr(inst[start:i], lineno))
-            start = i + 1
-    if start != len(inst):
-        results.append(_expr(inst[start:], lineno))
-    return results
+@trace.info("ast")
+def var(inst, lno):
+    if len(inst) != 1 and not inst[0][0].isdigit():
+        raise SyntaxError("Invalid variable name [line {}] - {}".format(lno, inst))
+    return ("var", inst[0])
 
-@trace.debug("ast")
-def _let(inst, lineno):
-    try:
-        return ("let", inst[1], _logic(inst[3:], lineno))
-    except IndexError:
-        raise SyntaxError("let contains too few arguments [line {}]".format(lineno))
-
-
-# Decl
-@trace.debug("ast")
-def _decl(inst, lineno):
-    op = {
-        "exists": ("exists", _logic(inst[1:], lineno)),
-        "forall": ("forall", _logic(inst[1:], lineno))
+@trace.info("ast")
+def program(inst, lno):
+    patterns = {
+        "let": ("let", var, "=", logic),
+        "exists": ("exists", logic),
+        "forall": ("forall", logic)
     }
-    return op[inst[0]]
-    return ("exists", _logic(inst[1:], lineno))
+    result = _match_all(patterns, inst, lno)
+    if not result:
+        raise SyntaxError("Unknown Syntax [line {}] - {}".format(lno, inst))
+    return result
 
-@trace.debug("ast")
-def _program(inst, lineno):
-    if inst[0] == "let":
-        return _let(inst, lineno)
-    if inst[0] in ["exists", "forall"]:
-        return _decl(inst, lineno)
-    else:
-        return _logic(inst, lineno)
 
 # in: a list of lines, each line a list of tokens
 # out: a f-ast
 @trace.info("ast")
-def run(program):
+def run(insts):
     ast = []
-    for lnum, inst in enumerate(program):
-        ast.append(_program(inst, lnum+1))
+    for lnum, inst in enumerate(insts):
+        ast.append(program(inst, lnum+1))
     return ast
 
 if __name__ == "__main__":
