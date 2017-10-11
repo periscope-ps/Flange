@@ -189,7 +189,7 @@ def var(inst, lno):
 @trace.info("ast")
 def program(inst, lno):
     patterns = {
-        "let": ("let", var, "=", logic),
+        "let": ("let", lambda x,y: x[0], "=", logic),
         "exists": ("exists", logic),
         "forall": ("forall", logic)
     }

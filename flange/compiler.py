@@ -1,9 +1,9 @@
 from flange import findlines
 from flange import tokenizer
 from flange import ast
-from flange import nodefinder
-from flange import flowmaker
-from flange import naiveflow
+from flange import collapseflows
+from flange import createobjects
+from flange import buildpaths
 from flange.backend import netpath
 
 from lace.logging import DEBUG, INFO, CRITICAL
@@ -11,13 +11,15 @@ from lace.logging import trace
 
 import sys
 
-passes = [findlines, tokenizer, ast, naiveflow, netpath]
+passes = [findlines, tokenizer, ast, collapseflows, createobjects, buildpaths, netpath]
 oldhook = sys.excepthook
 
 @trace.info("Compiler")
-def compile(program, loglevel=0, interactive=False, firstn=len(passes)):
-    trace.setLevel([CRITICAL, INFO, DEBUG][loglevel], True)
+def compile(program, loglevel=0, interactive=False, firstn=len(passes), breakpoint=None):
+    trace.setLevel([CRITICAL, INFO, DEBUG][min(loglevel, 2)], True, showreturn=(loglevel > 2))
     trace.runInteractive(interactive)
+    if breakpoint:
+        trace.setBreakpoint(breakpoint)
     
     if not loglevel:
         sys.excepthook = lambda extype,exp,trace: print("{}: {}".format(extype.__name__, exp))

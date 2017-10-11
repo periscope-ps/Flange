@@ -1,6 +1,7 @@
 from lace.logging import trace
 from unis import Runtime
-from unis.models import Node as uNode, Path as uPath
+from unis.models import Node, Port, Link
+
 
 from flange import settings
 from flange.exceptions import ResolutionError
@@ -10,30 +11,14 @@ from flange.primitives._base import fl_object
 class _resolvable(fl_object):
     __fl_rt__ = Runtime(settings.SOURCE_HOSTS)
     
-    def __new__(cls, *args, **kwargs):
-        if len(args) and isinstance(args[0], _resolvable):
-            args[0] = args[0].__fl_members__
-        obj = super().__new__(cls)
-        obj.__fl_type__ = cls.__name__
-        return obj
-    
-    def __fl_init__(self, query):
-        if isinstance(query, set):
-            self.__fl_members__ = query
-        else:
-            self.__fl_members__ = set(self.__fl_rt__.nodes.where(query))
-    
-    @trace.debug("resolvable")
-    def __exists__(self, candidates):
-        for c in candidates:
-            yield c
-    
-    @trace.debug("resolvable")
-    def __forall__(self, candidates):
-        for c in candidates:
-            yield c
+    def __fl_next__(self):
+        raise NotImplemented()
 
-class node(_resolvable):
+class query(_resolvable):
+    @trace.debug("query")
+    def __init__(self, q):
+        self.__fl_members__ = q if isinstance(q, set) else set(self.__fl_rt__.nodes.where(q))
+    
     @property
     def __fl_fringe__(self):
         if hasattr(self, "__fl_fringe_cache__"):
@@ -55,83 +40,135 @@ class node(_resolvable):
         self.__fl_fringe_cache__ = result
         return result
         
-    def __exists__(self, candidates):
-        nodes = list(candidates)
+    @trace.debug("query")
+    def __fl_next__(self):
+        nodes = self.__fl_members__
         if nodes:
             if len(nodes) == 1:
-                yield set([nodes[0]])
+                yield ("node", list(nodes)[0])
             else:
                 result = uNode()
                 result.virtual = True
                 result.ports = self.__fl_fringe__
-                yield set([result])
+                yield set([("node", result)])
                 
+    @trace.debug("query")
     def __union__(self, other):
         if isinstance(other, node):
             return node(self.__fl_members__ | other.__fl_members__)
         else:
             raise TypeError("Cannot perform union on node and {}".format(type(other.__fl_type__)))
     
+    @trace.debug("query")
     def __intersection__(self, other):
         if isinstance(other, node):
             return node(self.__fl_members__ & other.__fl_members__)
         else:
             raise TypeError("Cannot perform intersection on node and {}".format(type(other.__fl_type__)))
-    
+
+    @trace.debug("query")
     def __complement__(self):
         return node(lambda x: x not in self.__fl_members__)
-    
-    def __raw__(self):
-        return self.__fl_members__
-    
+
+
 class flow(_resolvable):
-    def __fl_init__(self, query):
-        self.__fl_query__ = query
-    def __raw__(self):
-        return self.__fl_members__
+    @trace.debug("flow")
+    def __init__(self, hops):
+        self.__fl_hops__ = hops
+
+    @trace.debug("flow")
+    def _getpaths(self):
+        source = self.__fl_hops__[0]
+        sink   = self.__fl_hops__[-1]
+        result = []
+        
+        for source in source.__fl_members__:
+            if source in sink.__fl_members__:
+                return ("flow", ("node", source), ("node", source))
+            fringe = [[source]]
+            while fringe:
+                origin = fringe.pop(0)
+                for port in origin[-1].ports:
+                    node = None
+                    path = list(origin[1:])
+                    path.append(port)
+                    path.append(port.link)
+                    if path[-1].directed:
+                        if path[-1].endpoints.source == port:
+                            path.append(path[-1].endpoints.sink)
+                            node = path[-1]
+                    else:
+                        if path[-1].endpoints[0] == port:
+                            path.append(path[-1].endpoints[1])
+                        else:
+                            path.append(path[-1].endpoints[0])
+                        node = path[-1].node
+                    if node and node not in path:
+                        path.append(node)
+                        path.insert(0, origin[0])
+                        if node in sink.__fl_members__:
+                            yield path
+                        else:
+                            fringe.append(path)
+
+    @trace.debug("flow")
+    def __fl_next__(self):
+        for path in self._getpaths():
+            stack = list(self.__fl_hops__)
+            result = ["flow"]
+            for element in path:
+                tys = {
+                    Node: "node",
+                    Port: "port",
+                    Link: "link"
+                }
+                ty = tys[type(element)]
+                item = (ty, element)
+                if ty == "node":
+                    if element in stack[0].__fl_members__:
+                        if isinstance(stack[0], function):
+                            item = ("function", (stack[0].name, element, "function-body-here"))
+                        else:
+                            item = ("node", element)
+                        stack.pop(0)
+                result.append(item)
+                
+            if not stack:
+                yield set([tuple(result)])
+            result = ["flow"]
     
-    @property
-    def __fl_members__(self):
-        if hasattr(self, "__fl_cache__"):
-            for member in self.__fl_cache__:
-                yield member
-        else:
-            cache = []
-            for member in self.__fl_query__():
-                member = set([uPath({"directed": True, "hops": member})])
-                cache.append(member)
-                yield member
-            self.__fl_cache__ = cache
-    
+    @trace.debug("flow")
     def __union__(self, other):
         def _union():
-            for x in self.__fl_members__:
+            for x in self.__fl_next__:
                 yield x
-            for y in other.__fl_members__:
+            for y in other.__fl_next__:
                 yield y
-        return flow(_union)
+        result = flow()
+        result.__fl_next__ = _union
+        return result
         
+    @trace.debug("flow")
     def __intersection__(self, other):
         def _inter():
-            for x in self.__fl_members__:
-                for y in other.__fl_members__:
+            for x in self.__fl_next__:
+                for y in other.__fl_next__:
                     yield x | y
-        return flow(_inter)
+        result = flow()
+        result.__fl_next__ = _inter
+        return result
     
+    @trace.debug("flow")
     def __complement__(self):
-        raise TypeError("Unsupported type")
+        raise TypeError("Type flow does not support complement")
     
-class function(node):
+class function(query):
     def __init__(self, name):
         if isinstance(name, list):
             name = "_".join([x.name for x in name])
         self.name = name
-    def __fl_init__(self, query):
-        self.__fl_members__ = self.__fl_rt__.nodes.where(lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes"))
-        
-    @trace.debug("Function")
-    def __exists__(self, candidates):
-        for node in candidates:
-            print("here")
-            if node.properties.executes == "python":
-                yield node
+        self.__fl_members__ = set(self.__fl_rt__.nodes.where(lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes")))
+
+    def __fl_next__(self):
+        _, result = super().__fl_next__()
+        return set([("function", self.name, result)])

@@ -4,15 +4,32 @@ from flange.primitives.collections import fl_object
 import math
 
 class _logic(fl_object):
-    def __new__(cls, *args, **kwargs):
-        obj = super().__new__(cls)
-        obj.__fl_type__ = cls.__name__
-    def __fl_init__(self, v):
+    def __init__(self, v):
         self._v = v
+    def __eq__(self, other):
+        if isinstance(other, fl_object):
+            return self._v == other._v
+        else:
+            return False
+    def __ne__(self, other):
+        if isinstance(other, fl_object):
+            return self._v != other._v
+        else:
+            return False
+    def __gt__(self, other):
+        return self._v > other._v
+    def __ge__(self, other):
+        return self._v <= other._v
+    def __lt__(self, other):
+        return self._v < other._v
+    def __le__(self, other):
+        return self._v <= other._v
     def __bool__(self):
         return bool(self._v)
     def __raw__(self):
         return self._v
+    def __repr__(self):
+        return "<{} {}>".format(self.__fl_type__, self._v)
 
 class boolean(_logic):
     def __init__(self, value):
@@ -58,4 +75,14 @@ class string(_logic):
     def __intersection__(self, other):
         raise NotImplemented()
     def __complement__(self):
+        raise NotImplemented()
+
+class empty(_logic):
+    def __eq__(self, other):
+        if isinstance(other, empty):
+            return True
+        return False
+    def __gt__(self, other):
+        raise NotImplemented()
+    def __lt__(self, other):
         raise NotImplemented()
