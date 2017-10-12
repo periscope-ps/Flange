@@ -1,3 +1,5 @@
+import argparse
+
 from flange import findlines
 from flange import tokenizer
 from flange import ast
@@ -15,7 +17,7 @@ passes = [findlines, tokenizer, ast, collapseflows, createobjects, buildpaths, n
 oldhook = sys.excepthook
 
 @trace.info("Compiler")
-def compile(program, loglevel=0, interactive=False, firstn=len(passes), breakpoint=None):
+def flange(program, loglevel=0, interactive=False, firstn=len(passes), breakpoint=None):
     trace.setLevel([CRITICAL, INFO, DEBUG][min(loglevel, 2)], True, showreturn=(loglevel > 2))
     trace.runInteractive(interactive)
     if breakpoint:
@@ -30,3 +32,16 @@ def compile(program, loglevel=0, interactive=False, firstn=len(passes), breakpoi
         program = p.run(program)
         
     return program
+
+
+def main():
+    parser = argparse.ArgumentParser(description="DLT File Transfer Tool")
+    parser.add_argument('file', metavar='FILE', type=str, nargs=1,
+                        help='File to compile')
+
+    args = parser.parse_args()
+    
+    with open(args.file[0]) as f:
+        program = f.read()
+        
+    print(flange(program))

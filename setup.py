@@ -31,13 +31,22 @@ class tester(Command):
 setup(
     name="flanged",
     version=version,
-    packages=["flange", "flange.backend", "flanged", "flanged.handlers", "flanged.tests"],
+    packages=["flange", "flange.primitives", "flange.backend", "flanged", "flanged.handlers", "flanged.tests"],
     author="Joseph Cottam, Jeremy Musser",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     
+    dependency_links=[
+        "git+https://github.com/periscope-ps/lace.git/@master#egg=lace",
+        "git+https://github.com/periscope-ps/unisrt.git/@develop#egg=unisrt",
+    ],
     install_requires=[
         "falcon",
         "bson",
     ],
+    entry_points = {
+        'console_scripts': [
+            'flange = flange.compiler:main',
+        ]
+    },
     cmdclass={'test': tester },
 )

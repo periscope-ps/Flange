@@ -62,6 +62,7 @@ def run(program):
             raise SyntaxError("Operation cannot be resolved into graph")
         valid = True
         for delta in op.__fl_next__():
+            print(delta)
             for element in delta:
                 if element[0] == "node":
                     result.append(create_node(element[1]))

@@ -45,7 +45,7 @@ class query(_resolvable):
         nodes = self.__fl_members__
         if nodes:
             if len(nodes) == 1:
-                yield ("node", list(nodes)[0])
+                yield set([("node", list(nodes)[0])])
             else:
                 result = uNode()
                 result.virtual = True
