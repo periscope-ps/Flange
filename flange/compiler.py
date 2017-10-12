@@ -1,4 +1,5 @@
 import argparse
+import json
 
 from flange import findlines
 from flange import tokenizer
@@ -31,17 +32,22 @@ def flange(program, loglevel=0, interactive=False, firstn=len(passes), breakpoin
     for p in _passes:
         program = p.run(program)
         
-    return program
+    return json.dumps(program)
 
 
 def main():
     parser = argparse.ArgumentParser(description="DLT File Transfer Tool")
     parser.add_argument('file', metavar='FILE', type=str, nargs=1,
                         help='File to compile')
+    parser.add_argument('-o', '--output', type=str, default="out.d",
+                        help='Output filename')
+
+
 
     args = parser.parse_args()
     
     with open(args.file[0]) as f:
         program = f.read()
         
-    print(flange(program))
+    with open(args.output, 'w') as f:
+        f.write(flange(program))
