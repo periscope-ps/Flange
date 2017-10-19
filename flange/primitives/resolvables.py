@@ -1,23 +1,20 @@
 from lace.logging import trace
-from unis import Runtime
 from unis.models import Node, Port, Link
 
 
-from flange import settings
+from flange import utils
 from flange.exceptions import ResolutionError
 from flange.primitives._base import fl_object
 
 
 class _resolvable(fl_object):
-    __fl_rt__ = Runtime(settings.SOURCE_HOSTS)
-    
     def __fl_next__(self):
         raise NotImplemented()
 
 class query(_resolvable):
     @trace.debug("query")
     def __init__(self, q):
-        self.__fl_members__ = q if isinstance(q, set) else set(self.__fl_rt__.nodes.where(q))
+        self.__fl_members__ = q if isinstance(q, set) else set(utils.runtime().nodes.where(q))
     
     @property
     def __fl_fringe__(self):
@@ -47,28 +44,28 @@ class query(_resolvable):
             if len(nodes) == 1:
                 yield set([("node", list(nodes)[0])])
             else:
-                result = uNode()
+                result = Node()
                 result.virtual = True
                 result.ports = self.__fl_fringe__
                 yield set([("node", result)])
                 
     @trace.debug("query")
     def __union__(self, other):
-        if isinstance(other, node):
-            return node(self.__fl_members__ | other.__fl_members__)
+        if isinstance(other, query):
+            return query(self.__fl_members__ | other.__fl_members__)
         else:
-            raise TypeError("Cannot perform union on node and {}".format(type(other.__fl_type__)))
+            raise TypeError("Cannot perform union on query and {}".format(type(other.__fl_type__)))
     
     @trace.debug("query")
     def __intersection__(self, other):
-        if isinstance(other, node):
-            return node(self.__fl_members__ & other.__fl_members__)
+        if isinstance(other, query):
+            return query(self.__fl_members__ & other.__fl_members__)
         else:
-            raise TypeError("Cannot perform intersection on node and {}".format(type(other.__fl_type__)))
+            raise TypeError("Cannot perform intersection on query and {}".format(type(other.__fl_type__)))
 
     @trace.debug("query")
     def __complement__(self):
-        return node(lambda x: x not in self.__fl_members__)
+        return query(lambda x: x not in self.__fl_members__)
 
 
 class flow(_resolvable):
@@ -167,7 +164,7 @@ class function(query):
         if isinstance(name, list):
             name = "_".join([x.name for x in name])
         self.name = name
-        self.__fl_members__ = set(self.__fl_rt__.nodes.where(lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes")))
+        self.__fl_members__ = set(utils.runtime().nodes.where(lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes")))
 
     def __fl_next__(self):
         _, result = super().__fl_next__()

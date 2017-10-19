@@ -6,6 +6,20 @@ import flange.primitives as prim
 from flange import utils
 from flange.utils import monad, diad, nimp, recur
 
+@trace.debug("buildpaths")
+def lift_type(arg):
+    if isinstance(arg, str):
+        return prim.string(arg)
+    elif isinstance(arg, (int, float)):
+        return prim.number(arg)
+    elif isinstance(arg, bool):
+        return prim.boolean(arg)
+    elif isinstance(arg, type(None)):
+        return prim.empty(arg)
+    elif hasattr(arg, '__iter__'):
+        return prim.fl_list([lift_type(x) for x in arg])
+    else:
+        return trace
 
 @trace.info("buildpaths")
 def build_query(inst, env):
@@ -15,7 +29,8 @@ def build_query(inst, env):
         _env[inst[1]] = x
         try:
             return construct(inst[3], _env)
-        except AttributeError:
+        except AttributeError as exp:
+            print(exp)
             return False
             
     result = prim.query(_f)
@@ -45,10 +60,10 @@ def construct(inst, env):
         ">=":    diad(lambda a,b: a.__ge__(b), _curry),
         "<":     diad(lambda a,b: a.__lt__(b), _curry),
         "<=":    diad(lambda a,b: a.__le__(b), _curry),
-        "index": lambda inst: utils.lift_type(_curry(inst[1])[_curry(inst[2])]),
-        "attr":  lambda inst: utils.lift_type(getattr(_curry(inst[2]), inst[1][1])),
+        "index": lambda inst: lift_type(_curry(inst[1])[_curry(inst[2])]),
+        "attr":  lambda inst: lift_type(getattr(_curry(inst[2]), inst[1][1])),
         "exists": lambda inst: prim.exists(construct(inst[1], env)),
-        "forall": lambda inst: prim.exists(construct(inst[1], env))
+        "forall": lambda inst: prim.forall(construct(inst[1], env))
     }
     if isinstance(inst, tuple):
         return ops[inst[0]](inst)

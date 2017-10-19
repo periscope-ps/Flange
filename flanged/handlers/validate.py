@@ -4,6 +4,10 @@ from flanged.handlers.base import _BaseHandler
 from flanged.handlers.utils import get_body
 
 class ValidateHandler(_BaseHandler):
+    def __init__(self, conf, db, rt):
+        self.rt = rt
+        super().__init__(conf, db)
+        
     @falcon.before(_BaseHandler.do_auth)
     @falcon.after(_BaseHandler.encode_response)
     @get_body

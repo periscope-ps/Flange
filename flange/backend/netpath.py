@@ -1,3 +1,5 @@
+import json
+
 from lace.logging import trace
 from unis.models import Node, Path, Port, Link
 
@@ -52,7 +54,7 @@ def create_path(path):
             result["hops"].append(serial)
         elif ty == "link":
             result["hops"].append(item.to_JSON())
-    return result
+    return json.dumps(result)
 
 @trace.info("netpath")
 def run(program):

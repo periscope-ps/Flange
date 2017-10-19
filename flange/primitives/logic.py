@@ -8,22 +8,34 @@ class _logic(fl_object):
         self._v = v
     def __eq__(self, other):
         if isinstance(other, fl_object):
-            return self._v == other._v
+            return boolean(self._v == other._v)
         else:
-            return False
+            return boolean(False)
     def __ne__(self, other):
         if isinstance(other, fl_object):
-            return self._v != other._v
+            return boolean(self._v != other._v)
         else:
-            return False
+            return boolean(False)
     def __gt__(self, other):
-        return self._v > other._v
+        if isinstance(other, fl_object):
+            return boolean(self._v > other._v)
+        else:
+            return boolean(False)
     def __ge__(self, other):
-        return self._v <= other._v
+        if isinstance(other, fl_object):
+            return boolean(self._v <= other._v)
+        else:
+            return boolean(False)
     def __lt__(self, other):
-        return self._v < other._v
+        if isinstance(other, fl_object):
+            return boolean(self._v < other._v)
+        else:
+            return boolean(False)
     def __le__(self, other):
-        return self._v <= other._v
+        if isinstance(other, fl_object):
+            return boolean(self._v <= other._v)
+        else:
+            return boolean(False)
     def __bool__(self):
         return bool(self._v)
     def __raw__(self):
@@ -33,13 +45,16 @@ class _logic(fl_object):
 
 class boolean(_logic):
     def __init__(self, value):
-        self._v = bool(value._v)
+        if isinstance(value, fl_object):
+            self._v = bool(value._v)
+        else:
+            self._v = bool(value)
     def __intersection__(self, other):
         return boolean(self._v and other._v)
     def __union__(self, other):
         return boolean(self._v or other._v)
     def __complement__(self):
-        return not self._v
+        return boolean(not self._v)
 
 class number(_logic):
     def __add__(self, other):
@@ -80,8 +95,8 @@ class string(_logic):
 class empty(_logic):
     def __eq__(self, other):
         if isinstance(other, empty):
-            return True
-        return False
+            return boolean(True)
+        return boolean(False)
     def __gt__(self, other):
         raise NotImplemented()
     def __lt__(self, other):

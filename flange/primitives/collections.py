@@ -1,16 +1,17 @@
 from flange.primitives._base import fl_object
 
 class fl_list(fl_object):
-    def __new__(cls):
-        obj = super().__new__(cls)
-        obj.__fl_type__ = "list"
-        return obj
-        
     def __init__(self, ls):
         self._ls = ls
     
     def __getitem__(self, index):
         return self._ls[index]
+        
+    def __setitem__(self, index, value):
+        self._ls[index] = value
+    
+    def append(self, value):
+        self._ls.append(value)
     
     def __union__(self, other):
         if isinstance(other, fl_list):
@@ -28,3 +29,11 @@ class fl_list(fl_object):
         return bool(self._ls)
     def __raw__(self):
         return self._ls
+    def __eq__(self, other):
+        if isinstance(other, fl_list):
+            return super().__eq__(other)
+        else:
+            return other in self._ls
+    def __iter__(self, other):
+        for x in self._ls:
+            yield x

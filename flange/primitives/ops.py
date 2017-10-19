@@ -48,4 +48,4 @@ class exists(_operation):
     
 class forall(_operation):
     def __fl_next__(self):
-        yield list(self.__fl_operand__.__fl_next__())
+        yield set.union(*list(self.__fl_operand__.__fl_next__()))

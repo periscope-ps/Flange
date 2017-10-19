@@ -12,7 +12,7 @@ class _BaseHandler(object):
     def __init__(self, conf, db):
         self._conf = conf
         self._db = db
-
+    
     @classmethod
     def do_auth(self, req, resp, resource, params):
         if resource._conf.get('auth', False):
@@ -22,7 +22,7 @@ class _BaseHandler(object):
             try:
                 bearer, token = req.auth.split()
                 assert(bearer == "OAuth")
-            except:
+            except AssertionError as exp:
                 raise falcon.HTTPInvalidHeader("Malformed Authorization header", "Authorization")
             
             parts = token.split('.')

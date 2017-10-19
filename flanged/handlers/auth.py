@@ -12,8 +12,7 @@ from flanged.handlers.utils import get_body
 
 class AuthHandler(_BaseHandler):
     @falcon.after(_BaseHandler.encode_response)
-    @get_body
-    def on_post(self, req, resp, body):
+    def on_get(self, req, resp):
         if not req.auth:
             raise falcon.HTTPUnauthorized("No username or password presented")
         

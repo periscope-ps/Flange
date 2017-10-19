@@ -1,9 +1,9 @@
 import re
+from unis import Runtime
 from unis.models import Node
 
 from lace.logging import trace
 
-import flange.primitives as prim
 
 def diad(app, f):
     return lambda inst: app(f(inst[1]), f(inst[2]))
@@ -20,19 +20,6 @@ def recur(f):
             result.append(f(arg))
         return tuple(result)
     return _f
-@trace.debug("utils")
-def lift_type(arg):
-    if isinstance(arg, str):
-        return prim.string(arg)
-    elif isinstance(arg, (int, float)):
-        return prim.number(arg)
-    elif isinstance(arg, bool):
-        return prim.boolean(arg)
-    elif isinstance(arg, type(None)):
-        return prim.empty(arg)
-    else:
-        return arg
-
 
 @trace.debug("utils")
 def build_dep_tree(program):
@@ -74,3 +61,16 @@ def grammar(re_str, line, lines, handlers):
     else:
         return handlers["default"](line, lines)
         
+
+class _flange_rt(object):
+    __runtime__ = None
+    def __init__(self, source='http://localhost:8888'):
+        if not self.__runtime__:
+            if isinstance(source, Runtime):
+                type(self).__runtime__ = source
+            else:
+                type(self).__runtime__ = Runtime(source, defer_update=True)
+
+@trace.info("utils")
+def runtime(source='http://localhost:8888'):
+    return _flange_rt(source).__runtime__

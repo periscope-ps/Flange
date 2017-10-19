@@ -1,0 +1,47 @@
+body {
+    background-color: #eee;
+}
+
+svg text {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.clear {
+    clear: both;
+}
+
+.pointer {
+    cursor: pointer;
+}
+
+.controls {
+    float: left;
+    padding: 0px 10px;
+}
+
+#divCode, #divGraph {
+    margin: 10px;
+    height: 500px;
+    width: 45%;
+    float: left;
+    overflow: hidden;
+}
+
+#divGraph {
+    cursor: pointer;
+    background-color: #fff;
+}
+
+
+#flange {
+    width: 100%;
+    height: 100%;
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+    resize: none;
+    padding: 15px 8px;
+}

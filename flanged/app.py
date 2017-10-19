@@ -1,6 +1,9 @@
+import argparse
 import falcon
+import json
 
-from flanged.handlers import CompileHandler, AuthHandler, ValidateHandler, SketchHandler, SSLCheck
+from flanged.handlers import CompileHandler, AuthHandler, ValidateHandler, SketchHandler, GraphHandler, SSLCheck
+from unis import Runtime
 
 # TMP Mock database object
 class _Database(object):
@@ -13,7 +16,7 @@ class _Database(object):
             "qa": { "pwd": "qa", "prv": ["v"] }
         }
         
-    ### DO NOT ACTUALLY USE THIS, IT IS horribly INSECURE ##
+    ### DO NOT ACTUALLY USE THIS, IT IS horribly INSECURE ###
     def get_usr(self, usr, pwd):
         for k, v in self._usrs.items():
             if k == usr:
@@ -34,18 +37,25 @@ class _Database(object):
             self._store[usr] = []
         self._store[usr].append(flangelet)
 
-def _get_app():
+def _get_app(layout):
     conf = { "auth": True, "secret": "a4534asdfsberwregoifgjh948u12" }
     db = _Database()
+    rt = Runtime(defer_update=True)
+    if not layout or not rt.graph.load(layout):
+        rt.graph.spring(30)
+        rt.graph.dump('layout.json')
+    
     auth      = AuthHandler(conf, db)
-    compiler  = CompileHandler(conf, db)
-    validator = ValidateHandler(conf, db)
+    compiler  = CompileHandler(conf, db, rt)
+    validator = ValidateHandler(conf, db, rt)
     sketches  = SketchHandler(conf, db)
+    graph     = GraphHandler(conf, db, rt)
     
     ensure_ssl = SSLCheck(conf)
     
     #app = falcon.API(middleware=[ensure_ssl])
     app = falcon.API()
+    app.add_route('/', graph)
     app.add_route('/c', compiler)
     app.add_route('/a', auth)
     app.add_route('/v', validator)
@@ -53,19 +63,26 @@ def _get_app():
     app.add_route('/s/{usr}', sketches)
     
     return app
-
+    
 def main():
-    ## TODO ##
-    # Self host server
-    app = _get_app()
+    from lace import logging
+    parser = argparse.ArgumentParser(description='flanged provides a RESTful server for the processing and maintainance of flangelets.')
+    parser.add_argument('-p', '--port', default=8000, type=int, help='Set the port for the server')
+    parser.add_argument('-d', '--debug', default=0, type=int, help='Set the log level')
+    parser.add_argument('--layout', default='', help='Set the default SVG layout for the topology')
+    args = parser.parse_args()
+    
+    logging.trace.setLevel([logging.NOTSET, logging.INFO, logging.DEBUG][args.debug])
+    port = args.port
+    layout = args.layout
+    
+    app = _get_app(layout)
     
     from wsgiref.simple_server import make_server
-    server = make_server('localhost', 8000, app)
-
+    server = make_server('localhost', port, app)
+    
     print("Listening on localhost:8000")
     server.serve_forever()
-
+    
 if __name__ == "__main__":
     main()
-else:
-    application = _get_app()

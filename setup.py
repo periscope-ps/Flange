@@ -46,6 +46,7 @@ setup(
     entry_points = {
         'console_scripts': [
             'flange = flange.compiler:main',
+            'flanged = flanged.app:main'
         ]
     },
     cmdclass={'test': tester },

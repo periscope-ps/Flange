@@ -1,3 +1,4 @@
+from flanged.handlers.graph import GraphHandler
 from flanged.handlers.auth import AuthHandler
 from flanged.handlers.compiler import CompileHandler
 from flanged.handlers.validate import ValidateHandler

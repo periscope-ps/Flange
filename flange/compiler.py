@@ -1,24 +1,39 @@
 import argparse
 import json
 
+from flange import utils
 from flange import findlines
 from flange import tokenizer
 from flange import ast
 from flange import collapseflows
 from flange import createobjects
 from flange import buildpaths
-from flange.backend import netpath
+from flange.backend import netpath, svg
 
 from lace.logging import DEBUG, INFO, CRITICAL
 from lace.logging import trace
 
 import sys
 
-passes = [findlines, tokenizer, ast, collapseflows, createobjects, buildpaths, netpath]
+passes = [findlines, tokenizer, ast, collapseflows, createobjects, buildpaths]
+backends = {
+    "netpath": netpath,
+    "svg": svg
+}
 oldhook = sys.excepthook
 
-@trace.info("Compiler")
-def flange(program, loglevel=0, interactive=False, firstn=len(passes), breakpoint=None):
+class pcode(object):
+    def __init__(self, frontend):
+        self._fe = frontend
+        
+    def __getattribute__(self, n):
+        if n in backends:
+            return backends[n].run(self._fe)
+        else:
+            return super().__getattribute__(n)
+
+@trace.info("compiler")
+def compile_pcode(program, loglevel=0, interactive=False, firstn=len(passes), breakpoint=None):
     trace.setLevel([CRITICAL, INFO, DEBUG][min(loglevel, 2)], True, showreturn=(loglevel > 2))
     trace.runInteractive(interactive)
     if breakpoint:
@@ -32,7 +47,15 @@ def flange(program, loglevel=0, interactive=False, firstn=len(passes), breakpoin
     for p in _passes:
         program = p.run(program)
         
-    return json.dumps(program)
+    return pcode(program)
+    
+
+@trace.info("compiler")
+def flange(program, backend="netpath", db=None):
+    utils.runtime(db)
+    return getattr(compile_pcode(program), backend)
+
+
 
 
 def main():
