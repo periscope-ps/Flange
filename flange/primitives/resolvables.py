@@ -84,6 +84,8 @@ class flow(_resolvable):
         while fringe:
             origin = fringe.pop(0)
             for port in origin[-1].ports:
+                if not hasattr(port, "link"):
+                    continue
                 node = None
                 path = list(origin[1:])
                 path.append(port)
@@ -117,7 +119,12 @@ class flow(_resolvable):
                     Port: "port",
                     Link: "link"
                 }
-                ty = tys[type(element)]
+                ty = None
+                for k, ty in tys.items():
+                    if isinstance(element, k):
+                        break
+                if not ty:
+                    raise CompilerError("Found unknown path element - {}".format(type(element)))
                 item = (ty, element)
                 if ty == "node":
                     if element in stack[0].__fl_members__:

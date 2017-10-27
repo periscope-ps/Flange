@@ -37,10 +37,10 @@ class _Database(object):
             self._store[usr] = []
         self._store[usr].append(flangelet)
 
-def _get_app(layout):
+def _get_app(unis, layout):
     conf = { "auth": True, "secret": "a4534asdfsberwregoifgjh948u12" }
     db = _Database()
-    rt = Runtime(defer_update=True)
+    rt = Runtime(unis, defer_update=True)
     if not layout or not rt.graph.load(layout):
         rt.graph.spring(30)
         rt.graph.dump('layout.json')
@@ -50,6 +50,7 @@ def _get_app(layout):
     validator = ValidateHandler(conf, db, rt)
     sketches  = SketchHandler(conf, db)
     graph     = GraphHandler(conf, db, rt)
+    #subscribe = SubscriptionHandler(conf)
     
     ensure_ssl = SSLCheck(conf)
     
@@ -59,14 +60,16 @@ def _get_app(layout):
     app.add_route('/c', compiler)
     app.add_route('/a', auth)
     app.add_route('/v', validator)
-    app.add_route('/s', sketches)
-    app.add_route('/s/{usr}', sketches)
+    app.add_route('/l', sketches)
+    app.add_route('/l/{usr}', sketches)
+    #app.add_route('/s', subscribe)
     
     return app
     
 def main():
     from lace import logging
     parser = argparse.ArgumentParser(description='flanged provides a RESTful server for the processing and maintainance of flangelets.')
+    parser.add_argument('-u', '--unis', default='http://localhost:8888', type=str, help='Set the comma diliminated urls to the unis instances of interest')
     parser.add_argument('-p', '--port', default=8000, type=int, help='Set the port for the server')
     parser.add_argument('-d', '--debug', default=0, type=int, help='Set the log level')
     parser.add_argument('--layout', default='', help='Set the default SVG layout for the topology')
@@ -75,13 +78,14 @@ def main():
     logging.trace.setLevel([logging.NOTSET, logging.INFO, logging.DEBUG][args.debug])
     port = args.port
     layout = args.layout
+    unis = args.unis
     
-    app = _get_app(layout)
+    app = _get_app(unis, layout)
     
     from wsgiref.simple_server import make_server
     server = make_server('localhost', port, app)
     
-    print("Listening on localhost:8000")
+    print("Listening on {}".format(unis))
     server.serve_forever()
     
 if __name__ == "__main__":
