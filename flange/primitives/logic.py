@@ -91,6 +91,8 @@ class string(_logic):
         raise NotImplemented()
     def __complement__(self):
         raise NotImplemented()
+    def __getitem__(self, i):
+        return self._v[i._v]
 
 class empty(_logic):
     def __eq__(self, other):

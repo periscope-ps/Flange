@@ -11,6 +11,6 @@ class GraphHandler(_BaseHandler):
     #@falcon.before(_BaseHandler.do_auth)
     @get_body
     def on_get(self, req, resp, body):
-        resp.body = self.rt.graph.svg()
+        resp.body = str(self.rt.graph.svg())
         resp.content_type = falcon.MEDIA_HTML
         resp.status = falcon.HTTP_200

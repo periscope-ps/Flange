@@ -1,4 +1,5 @@
 import falcon
+import json
 
 from flange import compiler
 
@@ -14,15 +15,16 @@ class CompileHandler(_BaseHandler):
     @falcon.after(_BaseHandler.encode_response)
     @get_body
     def on_post(self, req, resp, body):
-        ty = "netpath"
         if "program" not in body:
             raise falcon.HTTPInvalidParam("Compilation request requires a program field", "program")
-        if "flags" in body:
-            ty = body["flags"]["type"]
-            
-        resp.body = self.compute(body["program"], ty)
-        resp.content_type = falcon.MEDIA_HTML
-        resp.status = falcon.HTTP_200
+        ty = body.get("flags", {}).get("type", "netpath")
+        
+        try:
+            resp.body = self.compute(body["program"], ty)
+            resp.status = falcon.HTTP_200
+        except falcon.HTTPUnprocessableEntity as exp:
+            resp.body = { "error": str(exp) }
+            resp.status = falcon.HTTP_500
         
     def authorize(self, attrs):
         return True if "x" in attrs else False

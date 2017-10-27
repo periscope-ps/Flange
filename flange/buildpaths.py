@@ -35,7 +35,7 @@ def build_query(inst, env):
             
     result = prim.query(_f)
     if inst[2]:
-        return result.__intersection__(construct(inst[1], env))
+        return result.__intersection__(construct(inst[2], env))
     return result
 
 @trace.info("buildpaths")
@@ -60,7 +60,7 @@ def construct(inst, env):
         ">=":    diad(lambda a,b: a.__ge__(b), _curry),
         "<":     diad(lambda a,b: a.__lt__(b), _curry),
         "<=":    diad(lambda a,b: a.__le__(b), _curry),
-        "index": lambda inst: lift_type(_curry(inst[1])[_curry(inst[2])]),
+        "index": lambda inst: lift_type(_curry(inst[1]).__getitem__(_curry(inst[2]))),
         "attr":  lambda inst: lift_type(getattr(_curry(inst[2]), inst[1][1])),
         "exists": lambda inst: prim.exists(construct(inst[1], env)),
         "forall": lambda inst: prim.forall(construct(inst[1], env))

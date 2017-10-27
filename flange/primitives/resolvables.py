@@ -46,7 +46,8 @@ class query(_resolvable):
             else:
                 result = Node()
                 result.virtual = True
-                result.ports = self.__fl_fringe__
+                result._members = self.__fl_members__
+                result.ports = list(self.__fl_fringe__)
                 yield set([("node", result)])
                 
     @trace.debug("query")
@@ -79,34 +80,31 @@ class flow(_resolvable):
         sink   = self.__fl_hops__[-1]
         result = []
         
-        for source in source.__fl_members__:
-            if source in sink.__fl_members__:
-                return ("flow", ("node", source), ("node", source))
-            fringe = [[source]]
-            while fringe:
-                origin = fringe.pop(0)
-                for port in origin[-1].ports:
-                    node = None
-                    path = list(origin[1:])
-                    path.append(port)
-                    path.append(port.link)
-                    if path[-1].directed:
-                        if path[-1].endpoints.source == port:
-                            path.append(path[-1].endpoints.sink)
-                            node = path[-1]
+        fringe = [[x] for x in source.__fl_members__]
+        while fringe:
+            origin = fringe.pop(0)
+            for port in origin[-1].ports:
+                node = None
+                path = list(origin[1:])
+                path.append(port)
+                path.append(port.link)
+                if path[-1].directed:
+                    if path[-1].endpoints.source == port:
+                        path.append(path[-1].endpoints.sink)
+                        node = path[-1]
+                else:
+                    if path[-1].endpoints[0] == port:
+                        path.append(path[-1].endpoints[1])
                     else:
-                        if path[-1].endpoints[0] == port:
-                            path.append(path[-1].endpoints[1])
-                        else:
-                            path.append(path[-1].endpoints[0])
-                        node = path[-1].node
-                    if node and node not in path:
-                        path.append(node)
-                        path.insert(0, origin[0])
-                        if node in sink.__fl_members__:
-                            yield path
-                        else:
-                            fringe.append(path)
+                        path.append(path[-1].endpoints[0])
+                    node = path[-1].node
+                if node and node not in path:
+                    path.append(node)
+                    path.insert(0, origin[0])
+                    if node in sink.__fl_members__:
+                        yield path
+                    else:
+                        fringe.append(path)
 
     @trace.debug("flow")
     def __fl_next__(self):

@@ -9,12 +9,31 @@ svg text {
     user-select: none;
 }
 
+circle {
+    fill: white;
+}
+
+circle.active {
+    fill: red;
+}
+
+circle.source {
+    fill: blue;
+}
+circle.sink {
+    fill: green;
+}
+
 .clear {
     clear: both;
 }
 
 .pointer {
     cursor: pointer;
+}
+
+.hidden {
+    display: none;
 }
 
 .controls {
@@ -28,6 +47,15 @@ svg text {
     width: 45%;
     float: left;
     overflow: hidden;
+}
+
+#divNetpath {
+    margin: 10px;
+    height: 500px;
+    width: 45%;
+    float: left;
+    overflow: scroll;
+    background-color: #fff;
 }
 
 #divGraph {

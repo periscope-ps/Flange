@@ -29,7 +29,10 @@ def _match_until(start, inst, name, lno):
     for i in range(start, len(inst)):
         if inst[i] == name and valid:
             return (start, i)
-        valid = not parens.isNested(inst[i], lno)
+        try:
+            valid = not parens.isNested(inst[i], lno)
+        except SyntaxError:
+            break
     return False
 
 @trace.debug("ast")
@@ -140,14 +143,14 @@ def attr(inst, lno):
 
 @trace.info("ast")
 def query(inst, lno):
+    resolver = _match(("{", var, "in", query, "|", logic, "}"), inst, lno)
+    if resolver:
+        flow = resolver("query")
+        return ("query", flow[1][1], flow[2], flow[3])
     resolver = _match(("{", var, "|", logic, "}"), inst, lno)
     if resolver:
         flow = resolver("query")
         return ("query", flow[1][1], (), flow[2])
-    resolver = _match(("{", var, "in", query, "|", logic, "}"), inst, lno)
-    if resolver:
-        flow = resolver("query")
-        return ("query", flow[1], flow[2], flow[3])
     return ls(inst, lno)
 
 @trace.info("ast")

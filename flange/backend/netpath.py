@@ -8,7 +8,7 @@ from flange.primitives.ops import _operation
 
 @trace.info("netpath")
 def create_node(node):
-    return node
+    return node.to_JSON()
 
 @trace.info("netpath")
 def create_path(path):

@@ -7,22 +7,21 @@ from flange.primitives.ops import _operation
 @trace.info("svg")
 def create_path(path):
     rules = []
-    result = []
     for i, (ty, element) in enumerate(path):
+        if i == 0 or i == len(path) - 1:
+            rules.append((element, ""))
         if ty in ['node', 'function']:
             if ty == 'function':
                 name, element, body = item
                 rules.append((element, "register stream process - {}".format(name)))
-            result.append(element)
         if i != 0 and i != len(path) - 1 and ty == 'node':
             rules.append((element, "l4_src: {}\nl4_dst: {}\nFORWARD\n> PORT {} TO {}".format(path[1][1].address.address,
                                                                                              path[-2][1].address.address,
                                                                                              path[i -1][1].index, path[i + 1][1].index)))
-    return result, rules
+    return rules
 
 @trace.info("svg")
 def run(program):
-    active = []
     rules = []
     
     if not utils.runtime().graph.processing_level:
@@ -34,11 +33,13 @@ def run(program):
         for delta in op.__fl_next__():
             for element in delta:
                 if element[0] == "node":
-                    active.append([element[1]])
+                    if hasattr(element[1], "virtual") and element[1].virtual:
+                        for n in element[1]._members:
+                            rules.append([(n, "")])
+                    else:
+                        rules.append([(element[1], "")])
                 elif element[0] == "flow":
-                    nodes, rule = create_path(element[1:])
-                    active.append(nodes)
-                    rules.extend(rule)
+                    rules.append(create_path(element[1:]))
                     
             break
-    return utils.runtime().graph.svg(active, rules)
+    return utils.runtime().graph.svg(rules)

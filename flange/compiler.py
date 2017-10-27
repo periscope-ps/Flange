@@ -33,9 +33,10 @@ class pcode(object):
             return super().__getattribute__(n)
 
 @trace.info("compiler")
-def compile_pcode(program, loglevel=0, interactive=False, firstn=len(passes), breakpoint=None):
-    trace.setLevel([CRITICAL, INFO, DEBUG][min(loglevel, 2)], True, showreturn=(loglevel > 2))
-    trace.runInteractive(interactive)
+def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes), breakpoint=None):
+    if loglevel:
+        trace.setLevel([CRITICAL, INFO, DEBUG][min(loglevel, 2)], True, showreturn=(loglevel > 2))
+        trace.runInteractive(interactive)
     if breakpoint:
         trace.setBreakpoint(breakpoint)
     
@@ -53,7 +54,13 @@ def compile_pcode(program, loglevel=0, interactive=False, firstn=len(passes), br
 @trace.info("compiler")
 def flange(program, backend="netpath", db=None):
     utils.runtime(db)
-    return getattr(compile_pcode(program), backend)
+    pcode = compile_pcode(program)
+    if isinstance(backend, list):
+        result = {}
+        for be in backend:
+            result[be] = getattr(pcode, be)
+        return result
+    return getattr(pcode, backend)
 
 
 
