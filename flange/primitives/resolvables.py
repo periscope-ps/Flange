@@ -23,17 +23,18 @@ class query(_resolvable):
         result = set()
         for node in self.__fl_members__:
             for port in node.ports:
-                if port.link.directed:
-                    if port.link.endpoints.source.node == node:
-                        if not port.link.endpoints.sink.node in self.__fl_members__:
-                            result.add(port)
-                else:
-                    if port.link.endpoints[0].node == node:
-                        if not port.link.endpoints[1].node in self.__fl_members__:
-                            result.add(port)
+                if hasattr(port, "link"):
+                    end = None
+                    if port.link.directed:
+                        if port.link.endpoints.source.node == node:
+                            end = port.link.endpoints.sink.node
                     else:
-                        if not port.link.endpoints[0].node in self.__fl_members__:
-                            result.add(port)
+                        if port.link.endpoints[0].node == node:
+                            end = port.link.endpoints[1].node
+                        else:
+                            end = port.link.endpoints[0].node
+                    if end and end not in self.__fl_members__:
+                       result.add(port)
         self.__fl_fringe_cache__ = result
         return result
         
