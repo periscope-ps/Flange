@@ -108,7 +108,7 @@ class flow(_resolvable):
                         yield path
                     else:
                         fringe.append(path)
-
+    
     @trace.debug("flow")
     def __fl_next__(self):
         for path in self._getpaths():
@@ -138,7 +138,6 @@ class flow(_resolvable):
                 
             if not stack:
                 yield set([tuple(result)])
-            result = ["flow"]
     
     @trace.debug("flow")
     def __union__(self, other):

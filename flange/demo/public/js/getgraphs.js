@@ -114,8 +114,13 @@ function highlightNode(event) {
 }
 
 function postFlangelet() {
-    data = { "program": $("#flange").val(), "type": "svg,netpath" };
-    $.post('f', data, setgraph);
+    if ($("#flange").val()) {
+	data = { "program": $("#flange").val(), "type": "svg,netpath" };
+	$.post('f', data, setgraph);
+    }
+    else {
+	$.get('f', setgraph);
+    }
 }
 
 function matmult(m1, m2) {
@@ -172,7 +177,7 @@ function moveSVG(event) {
 			$(this).attr("x1", translateX);
 			$(this).attr("y1", translateY);
 		    }
-		    else if ($(this).attr("x2") == cx && $(this).attr("y2") == cy) {
+		    if ($(this).attr("x2") == cx && $(this).attr("y2") == cy) {
 			$(this).attr("x2", translateX);
 			$(this).attr("y2", translateY);
 		    }

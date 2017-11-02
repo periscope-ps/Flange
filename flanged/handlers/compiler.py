@@ -1,5 +1,6 @@
 import falcon
 import json
+from unis.models import Flow
 
 from flange import compiler
 
@@ -18,7 +19,9 @@ class CompileHandler(_BaseHandler):
         if "program" not in body:
             raise falcon.HTTPInvalidParam("Compilation request requires a program field", "program")
         ty = body.get("flags", {}).get("type", "netpath")
-        
+        ty = ty if isinstance(ty, list) else [ty]
+        if "netpath" not in ty:
+            ty.append("netpath")
         try:
             resp.body = self.compute(body["program"], ty)
             resp.status = falcon.HTTP_200
@@ -32,8 +35,22 @@ class CompileHandler(_BaseHandler):
     def compute(self, prog, ty="netpath"):
         try:
             result = compiler.flange(prog, ty, self.rt)
+            links = []
+            for path in result["netpath"]:
+                path = json.loads(path)
+                for hop in path["hops"]:
+                    if "directed" in hop:
+                        links.append({'rel': 'full', 'href': hop["selfRef"]})
+                
+                flow = Flow({"hops": links})
+                flow.validate()
+                print(flow)
+                print(self.rt._pending)
+                self.rt.insert(Flow({ "hops": links }), commit=True)
+                
         except Exception as exp:
             raise falcon.HTTPUnprocessableEntity(exp)
-            
+        
+        self.rt.flush()
         self._db.insert(self._usr, prog)
         return result

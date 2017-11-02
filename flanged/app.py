@@ -84,8 +84,9 @@ def main():
     
     from wsgiref.simple_server import make_server
     server = make_server('localhost', port, app)
-    
-    print("Listening on {}".format(unis))
+    port = "" if port == 80 else port
+    print("Getting topology from {}".format(unis))
+    print("Listening on {}{}{}".format('http://localhost',":" if port else "", port))
     server.serve_forever()
     
 if __name__ == "__main__":
