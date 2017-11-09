@@ -1,0 +1,4 @@
+[console_scripts]
+flange = flange.compiler:main
+flanged = flanged.app:main
+
