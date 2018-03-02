@@ -6,6 +6,7 @@ from flange import utils
 from flange.exceptions import ResolutionError
 from flange.primitives._base import fl_object
 
+LOOPCOUNT = 3
 
 class _resolvable(fl_object):
     def __fl_next__(self):
@@ -50,7 +51,7 @@ class query(_resolvable):
                 result._members = self.__fl_members__
                 result.ports = list(self.__fl_fringe__)
                 yield set([("node", result)])
-                
+    
     @trace.debug("query")
     def __union__(self, other):
         if isinstance(other, query):
@@ -74,15 +75,21 @@ class flow(_resolvable):
     @trace.debug("flow")
     def __init__(self, hops):
         self.__fl_hops__ = hops
-
+    
     @trace.debug("flow")
     def _getpaths(self):
         source = self.__fl_hops__[0]
         sink   = self.__fl_hops__[-1]
         result = []
+        loops = 0
         
-        fringe = [[x] for x in source.__fl_members__]
-        while fringe:
+        fringe,lfringe = [[x] for x in source.__fl_members__], []
+        
+        while loops < LOOPCOUNT and (fringe or lfringe):
+            if not fringe:
+                fringe = lfringe
+                lfringe = []
+                loops += 1
             origin = fringe.pop(0)
             for port in origin[-1].ports:
                 if not hasattr(port, "link"):
@@ -101,13 +108,13 @@ class flow(_resolvable):
                     else:
                         path.append(path[-1].endpoints[0])
                     node = path[-1].node
-                if node and node not in path:
+                if node:
+                    f = lfringe if node in path else fringe
                     path.append(node)
                     path.insert(0, origin[0])
                     if node in sink.__fl_members__:
                         yield path
-                    else:
-                        fringe.append(path)
+                    f.append(path)
     
     @trace.debug("flow")
     def __fl_next__(self):

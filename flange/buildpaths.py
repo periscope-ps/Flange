@@ -24,6 +24,50 @@ def lift_type(arg):
 @trace.info("buildpaths")
 def build_query(inst, env):
     @trace.debug("buildpaths.build_query")
+    def _invert(inst):
+        ops = {
+            "and": lambda: ("or", ("not", inst[1]), ("not", inst[2])),
+            "or": lambda: ("and", ("not", inst[1]), ("not", inst[2])),
+            "not": lambda: inst[1],
+            "==": lambda: ("!=", inst[1], inst[2]),
+            "!=": lambda: ("==", inst[1], inst[2]),
+            ">": lambda: ("<=", inst[1], inst[2]),
+            "<": lambda: (">=", inst[1], inst[2]),
+            ">=": lambda: ("<", inst[1], inst[2]),
+            "<=": lambda: (">", inst[1], inst[2])
+        }
+        if isinstance(inst, tuple) and inst[0] in ops:
+            return ops[inst[0]]()
+        else:
+            raise SyntaxError()
+        
+    @trace.debug("buildpaths.build_query")
+    def _q(name, inst):
+        def _query(inst):
+            ops = {
+                "and": lambda: _query(inst[1]).intersection(_query(inst[2])),
+                "or": lambda: _query(inst[1]).union(_query(inst[2])),
+                "not": lambda: _query(_invert(inst[1])),
+                "var": lambda: env.get(inst[1], inst[1]),
+                "+": lambda: _query(inst[1]) + _query(inst[2]),
+                "-": lambda: _query(inst[1]) - _query(inst[2]),
+                "/": lambda: _query(inst[1]) / _query(inst[2]),
+                "*": lambda: _query(inst[1]) * _query(inst[2]),
+                "%": lambda: _query(inst[1]) % _query(inst[2]),
+                "==": lambda: set(utils.runtime().nodes.where({_query(inst[1]): {"eq": _query(inst[2])}})),
+                "!=": lambda: (lambda f, x,y: set(f({x: {"gt": y}})).union(set(f({x: {"lt": y}}))))(utils.runtime().nodes.where, _query(inst[1]), _query(inst[2])),
+                ">": lambda: set(utils.runtime().nodes.where({_query(inst[1]): {"gt":_query(inst[2])}})),
+                "<": lambda: set(utils.runtime().nodes.where({_query(inst[1]): {"lt":_query(inst[2])}})),
+                ">=": lambda: set(utils.runtime().nodes.where({_query(inst[1]): {"gte":_query(inst[2])}})),
+                "<=": lambda: set(utils.runtime().nodes.where({_query(inst[1]): {"lte":_query(inst[2])}})),
+                "index": lambda: _query(inst[1])[_query(inst[2])],
+                "attr": lambda: getattr(_query(inst[2]), _query(inst[1])) if _query(inst[2]) != name else _query(inst[1])
+            }
+            if isinstance(inst, tuple):
+                return ops[inst[0]]()
+            return getattr(inst, '__raw__', lambda: inst)()
+        return _query(inst)
+    @trace.debug("buildpaths.build_query")
     def _f(x):
         _env = copy(env)
         _env[inst[1]] = x
@@ -32,8 +76,8 @@ def build_query(inst, env):
         except AttributeError as exp:
             print(exp)
             return False
-            
-    result = prim.query(_f)
+    
+    result = prim.query(_q(inst[1], inst[3]))
     if inst[2]:
         return result.__intersection__(construct(inst[2], env))
     return result

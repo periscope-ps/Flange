@@ -69,7 +69,7 @@ class _flange_rt(object):
             if isinstance(source, Runtime):
                 type(self).__runtime__ = source
             else:
-                type(self).__runtime__ = Runtime(source, defer_update=True)
+                type(self).__runtime__ = Runtime(source, defer_update=True, )
 
 @trace.info("utils")
 def runtime(source='http://localhost:8888'):

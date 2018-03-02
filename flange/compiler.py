@@ -52,9 +52,9 @@ def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes),
     
 
 @trace.info("compiler")
-def flange(program, backend="netpath", db=None):
+def flange(program, backend="netpath", loglevel=None, db=None):
     utils.runtime(db)
-    pcode = compile_pcode(program)
+    pcode = compile_pcode(program, loglevel)
     if isinstance(backend, list):
         result = {}
         for be in backend:

@@ -25,7 +25,7 @@ def run(program):
     rules = []
     
     if not utils.runtime().graph.processing_level:
-        utils.runtime().graph.spring(25, 1000)
+        utils.runtime().graph.spring(25, 50)
     
     for op in program:
         if not isinstance(op, _operation):

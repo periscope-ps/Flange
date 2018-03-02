@@ -7,9 +7,9 @@ import sys
 version = "0.1.dev0"
 
 sys.path.append(".")
-if sys.version_info[0] < 3:
+if sys.version_info[0] < 3 or sys.version_info[1] < 5:
     print("------------------------------")
-    print("Must use python 3.0 or greater", file=sys.stderr)
+    print("Must use python 3.5 or greater", file=sys.stderr)
     print("Found python verion ", sys.version_info, file=sys.stderr)
     print("Installation aborted", file=sys.stderr)
     print("------------------------------")

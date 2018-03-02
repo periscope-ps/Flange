@@ -24,7 +24,7 @@
    index      = (app, "[", logic, "]") | attr
    attr       = (app, ".", app) | query
    query      = ("{", ws*, var, ws*, [ws, "in", ws+, query, ws*], "|", ws*, logic, "}") | ls
-   ls         = "[", ws*, logic*, ",", ws*, [logic], "]"
+   ls         = "[", ws*, logic*, ",", ws*, [logic], "]" | terms
    terms      = var | num | string | bool | none
    
 ** Structure
@@ -62,3 +62,28 @@
 ** Compositions
    decl = "(", ("exists" | "forall"), (var | node | flow | path), ")"
    
+* Type system
+| expression           | type                                     |
+|----------------------+------------------------------------------|
+| assert               | assertion -> None                        |
+| let                  | τ,Γ -> τ,Γ′                              |
+| exists               | query ..., assertion -> assertion        |
+| forall               | query ..., assertion -> assertion        |
+| {}                   | bool -> query                            |
+| and                  | bool, bool -> bool                       |
+|                      | assertion, assertion -> assertion        |
+| or                   | bool, bool -> bool                       |
+|                      | assertion, assertion -> assertion        |
+| not                  | bool -> bool                             |
+|                      | assertion -> assertion                   |
+| ~>                   | assertion, query, assertion -> assertion |
+| +-*/%                | number, number -> number                 |
+| . []                 | assertion, string -> τ                   |
+|                      | assertion, number -> τ                   |
+| ==, !=, <, >, <=, >= | number, number -> bool                   |
+|                      | string, string -> bool                   |
+| "[^"]*"              | string                                   |
+| '[^']*'              | string                                   |
+| 0-9+([.]0-9+)?       | number                                   |
+| None                 | none                                     |
+| True, False          | bool                                     |

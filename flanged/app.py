@@ -79,7 +79,6 @@ def main():
     port = args.port
     layout = args.layout
     unis = [str(u) for u in args.unis.split(',')]
-    print(unis)    
     app = _get_app(unis, layout)
     
     from wsgiref.simple_server import make_server
