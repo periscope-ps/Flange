@@ -9,6 +9,7 @@ Following is the sample usage of the following topology
 <p align="center">
   <img src="Topology.png" alt="Reference topology"/>
 </p>
-```sh
+
+```
 $ python ModifyNextHop.py -s node3 -d node1 -r http://localhost:8888
 ```
