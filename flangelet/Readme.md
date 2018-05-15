@@ -13,3 +13,10 @@ Following is the sample usage of the following topology
 ```
 $ python ModifyNextHop.py -s node3 -d node1 -r http://localhost:8888
 ```
+
+The above command prints the following output to the above shown topology, where `node5` is the switch(center) node in the topology
+
+```
+Updated next hop of   http://localhost:8888/services/node3  to   http://localhost:8888/services/node5
+Updated next hop of   http://localhost:8888/services/node5  to   http://localhost:8888/services/node1
+```
