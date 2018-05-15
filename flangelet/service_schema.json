@@ -1,0 +1,39 @@
+{
+    "status": "ON",
+    "$schema": "http://unis.open.sice.indiana.edu/schema/20160630/service#",
+    "serviceType": "ps:tools:ms",
+    "name": "node1",
+    "accessPoint": "http://localhost:8888/",
+    "runningOn": {
+        "href": "http://localhost:8888/nodes/node1",
+        "rel": "full"
+    },
+    "ts": 1507358769935006,
+    "id": "node1",
+    "ttl": 600,
+    "properties": {
+        "configurations": {
+            "default_collection_size": 10000,
+            "max_collection_size": 20000
+        },
+        "summary": {
+            "metadata": []
+        }
+    },
+    "coap_host": "my_coap_host",
+    "coap_port": "my_coap_port",
+    "ops": {
+        "op_name1": {"dependence": "d1", "fn": "fn1", "c_fn": "c_fn1"},
+        "op_name2": {"dependence": "d2", "fn": "fn2", "c_fn": "c_fn2"},
+        "op_name3": {"dependence": "d3", "fn": "fn3", "c_fn": "c_fn3"}
+    },
+    "active": ["active1", "active2", "active3"],
+    "optable": {
+        "optable_ent1": "dummy_optable_ent1",
+        "optable_ent2": "dummy_optable_ent2",
+        "optable_ent3": "dummy_optable_ent3"
+    },
+    "default_op_threads": 12345678,
+    "default_next_hop": "http://localhost:8888/nodes/node1"
+}
+
