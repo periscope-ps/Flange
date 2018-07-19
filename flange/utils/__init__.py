@@ -5,6 +5,9 @@ from unis.models import Node
 from lace.logging import trace
 
 
+class FlangeError(Exception):
+    pass
+
 def diad(app, f):
     return lambda inst: app(f(inst[1]), f(inst[2]))
 def monad(app, f):
@@ -64,13 +67,15 @@ def grammar(re_str, line, lines, handlers):
 
 class _flange_rt(object):
     __runtime__ = None
-    def __init__(self, source='http://localhost:8888'):
+    def __init__(self, source):
         if not self.__runtime__:
             if isinstance(source, Runtime):
                 type(self).__runtime__ = source
             else:
-                type(self).__runtime__ = Runtime(source, defer_update=True, )
+                conf = {'runtime': {'services': ['unis.services.graph.UnisGrapher']},
+                        'cache': {'preload': ['nodes', 'links']}}
+                type(self).__runtime__ = Runtime(source, **conf)
 
 @trace.info("utils")
-def runtime(source='http://localhost:8888'):
+def runtime(source=None):
     return _flange_rt(source).__runtime__

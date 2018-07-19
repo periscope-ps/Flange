@@ -1,4 +1,12 @@
 
+* Notes
+** Flange as an Interpreter
+   Flange seemed more complex than it is because we constantly framed the
+   language under the header of "compiler".  In truth, Flange is an interpreter
+   with the following key features:
+   * Programs return an object of type ~Graph~.
+   * The ~Graph~ object may contain zero or more ~Function~ objects
+
 * Language
 ** Terminals
    num    = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
