@@ -37,7 +37,7 @@ setup(
     
     dependency_links=[
         "git+https://github.com/periscope-ps/lace.git/@master#egg=lace",
-        "git+https://github.com/periscope-ps/unisrt.git/@multisource#egg=unisrt",
+        "git+https://github.com/periscope-ps/unisrt.git/@develop#egg=unisrt",
     ],
     install_requires=[
         "falcon>=1.3.0",

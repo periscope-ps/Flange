@@ -1,3 +1,4 @@
+import argparse
 import base64
 import json
 import os
@@ -21,13 +22,14 @@ class MainHandler(tornado.web.RequestHandler):
 
 class FlangeHandler(tornado.web.RequestHandler):
     @trace.info("FlangeHandler")
-    def initialize(self, token):
+    def initialize(self, token, href):
         self.token = token
+        self.href = href
     
     @trace.info("FlangeHandler")
     def get(self, *args, **kwargs):
         import json
-        r = requests.get("http://localhost:8000/")
+        r = requests.get(self.href)
         self.write(json.dumps({ "svg": r.text }))
     
     
@@ -40,15 +42,20 @@ class FlangeHandler(tornado.web.RequestHandler):
         else:
             payload = { "program": program, "flags": { "type":  tys } }
             headers = { "Authorization": "OAuth " + self.token }
-            r = requests.post("http://localhost:8000/c", 
+            r = requests.post(self.href + "/c", 
                               data=json.dumps(payload),
                               headers=headers)
             self.write(r.text)
     
 def main():
+    parser = argparse.ArgumentParser(description="Demo application for flanged")
+    parser.add_argument('-p', '--port', default='8001')
+    parser.add_argument('-f', '--flanged', default='http://localhost:9001')
+    args = parser.parse_args()
+    
     # Login to server
     headers = { "Authorization": "Basic " + base64.b64encode("programmer:programmer".encode('utf-8')).decode('utf-8') }
-    token = requests.get("http://localhost:8000/a", headers=headers).json()["Bearer"]
+    token = requests.get(args.flanged + "/a", headers=headers).json()["Bearer"]
     
     trace.setLevel(logging.DEBUG)
     ROOT = os.path.dirname(os.path.abspath(__file__)) + os.sep
@@ -59,12 +66,13 @@ def main():
                                    url(r"/css/(.*)",
                                        tornado.web.StaticFileHandler,
                                        { "path": ROOT + "./public/css" }),
-                                   url(r"/f", FlangeHandler, { "token": token })],
+                                   url(r"/f", FlangeHandler, { "token": token,
+                                                               "href": args.flanged})],
                                   autoreload = True,
                                   template_path = ROOT + "public")
     
     server = tornado.httpserver.HTTPServer(app)
-    server.listen(8001)
+    server.listen(args.port)
     
     IOLoop.instance().start()
 
