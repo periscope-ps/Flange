@@ -1,7 +1,7 @@
 import argparse
 import falcon
 import json
-
+from configparser import ConfigParser
 from flanged.handlers import CompileHandler, AuthHandler, ValidateHandler, SketchHandler, GraphHandler, SSLCheck
 from unis import Runtime
 from unis.services.graph import UnisGrapher
@@ -78,6 +78,37 @@ def _get_app(unis, layout, size=None):
     #app.add_route('/s', subscribe)
     
     return app
+
+def _read_config(file_path):
+    
+    parser = ConfigParser(allow_no_value=True)
+    
+    try:
+        parser.read(file_path)
+    except Exception:
+        raise AttributeError("INVALID FILE PATH FOR STATIC RESOURCE INI.")
+        return
+
+    config = parser['CONFIG']
+    print(config['unis']) 
+    try:
+        unis_refs   = json.loads(str(config['unis']))
+        debug_level = int(config['debug'])
+        port        = int(config['port'])
+        layout      = config['layout']
+        
+            
+        print('Unis Refs: ', unis_refs)
+        print('Debug level: ', debug_level)
+        print('Port: ', port)
+        print('Layout: ', layout)
+        
+        return unis_refs, port, debug_level, layout
+
+    except Exception as e:
+        print(e)
+        raise AttributeError('Error in config file, please ensure file is formatted correctly and contains values needed.')
+    
     
 def main():
     from lace import logging
@@ -87,20 +118,32 @@ def main():
     parser.add_argument('-d', '--debug', default=0, type=int, help='Set the log level')
     parser.add_argument('-s', '--size', default=0, type=int, help='Use a demo graph of the given size')
     parser.add_argument('--layout', default='', help='Set the default SVG layout for the topology')
+    parser.add_argument('-c', '--config', default=None, type=str, help='Start flanged using paremeters defined from a conf file. ex) flanged -c /your/path/to/file.ini')
     args = parser.parse_args()
+   
+    def serve(port, app):
+        from wsgiref.simple_server import make_server
+        server = make_server('localhost', port, app)
+        port = "" if port == 80 else port
+        print("Getting topology from {}".format(unis))
+        print("Listening on {}{}{}".format('http://localhost',":" if port else "", port))
+        server.serve_forever()
+
+    if args.config is not None:
+        unis, port, debug, layout = _read_config(args.config) 
+        logging.trace.setLevel([logging.NOTSET, logging.INFO, logging.DEBUG][args.debug])
+
+        app = _get_app(unis, layout, args.size)
+        serve(port, app) 
+    else:
+        logging.trace.setLevel([logging.NOTSET, logging.INFO, logging.DEBUG][args.debug])
+        port = args.port
+        layout = args.layout
+        unis = [str(u) for u in args.unis.split(',')]
     
-    logging.trace.setLevel([logging.NOTSET, logging.INFO, logging.DEBUG][args.debug])
-    port = args.port
-    layout = args.layout
-    unis = [str(u) for u in args.unis.split(',')]
-    app = _get_app(unis, layout, args.size)
+        app = _get_app(unis, layout, args.size)
+        serve(port, app)
     
-    from wsgiref.simple_server import make_server
-    server = make_server('localhost', port, app)
-    port = "" if port == 80 else port
-    print("Getting topology from {}".format(unis))
-    print("Listening on {}{}{}".format('http://localhost',":" if port else "", port))
-    server.serve_forever()
-    
+
 if __name__ == "__main__":
     main()
