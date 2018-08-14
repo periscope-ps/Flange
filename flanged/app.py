@@ -1,7 +1,8 @@
 import argparse
 import falcon
 import json
-
+from configparser import ConfigParser
+from collections import defaultdict
 from flanged.handlers import CompileHandler, AuthHandler, ValidateHandler, SketchHandler, GraphHandler, SSLCheck
 from unis import Runtime
 from unis.services.graph import UnisGrapher
@@ -80,30 +81,81 @@ def _get_app(unis, layout, size=None, push=False):
     #app.add_route('/s', subscribe)
     
     return app
+
+def _read_config(file_path):
+    if not file_path:
+        return {}
+    parser = ConfigParser(allow_no_value=True)
+    
+    try:
+        parser.read(file_path)
+    except Exception:
+        raise AttributeError("INVALID FILE PATH FOR STATIC RESOURCE INI.")
+        return
+
+    config = parser['CONFIG']
+    print(config['unis']) 
+    try:
+        result = {'unis': json.loads(str(config['unis'])),
+                  'debug': int(config['debug']),
+                  'port': int(config['port'])
+                  'layout': config['layout']}
+        
+        return result
+
+    except Exception as e:
+        print(e)
+        raise AttributeError('Error in config file, please ensure file is '
+                             'formatted correctly and contains values needed.')
+    
     
 def main():
     from lace import logging
-    parser = argparse.ArgumentParser(description='flanged provides a RESTful server for the processing and maintainance of flangelets.')
-    parser.add_argument('-u', '--unis', default='http://localhost:8888', type=str, help='Set the comma diliminated urls to the unis instances of interest')
-    parser.add_argument('-p', '--port', default=8000, type=int, help='Set the port for the server')
-    parser.add_argument('-d', '--debug', default=0, type=int, help='Set the log level')
-    parser.add_argument('-s', '--size', default=0, type=int, help='Use a demo graph of the given size')
-    parser.add_argument('-p', '--push', action='store_true', help='When used with --size, pushes the generated graph to the back end data store for future use')
-    parser.add_argument('--layout', default='', help='Set the default SVG layout for the topology')
+    parser = argparse.ArgumentParser(description='flanged provides a RESTful '
+                                     'server for the processing and '
+                                     'maintainance of flangelets.')
+    parser.add_argument('-u', '--unis', type=str, help='Set the comma '
+                        'diliminated urls to the unis instances of interest')
+    parser.add_argument('-p', '--port', type=int, help='Set the port for the '
+                        'server')
+    parser.add_argument('-d', '--debug', type=int, help='Set the log level')
+    parser.add_argument('-s', '--size', type=int, help='Use a demo graph of '
+                        'the given size')
+    parser.add_argument('-f', '--push', action='store_true', help='When used '
+                        'with --size, pushes the generated graph to the back '
+                        'end data store for future use')
+    parser.add_argument('--layout', help='Set the default SVG layout for the '
+                        'topology')
+    parser.add_argument('-c', '--config', type=str, help='Start flanged using '
+                        'paremeters defined from a conf file. ex) flanged -c '
+                        '/your/path/to/file.ini')
     args = parser.parse_args()
-    
-    logging.trace.setLevel([logging.NOTSET, logging.INFO, logging.DEBUG][args.debug])
-    port = args.port
-    layout = args.layout
-    unis = [str(u) for u in args.unis.split(',')]
-    app = _get_app(unis, layout, args.size, args.push)
-    
-    from wsgiref.simple_server import make_server
-    server = make_server('localhost', port, app)
-    port = "" if port == 80 else port
-    print("Getting topology from {}".format(unis))
-    print("Listening on {}{}{}".format('http://localhost',":" if port else "", port))
-    server.serve_forever()
-    
+   
+    def serve(port, app):
+        from wsgiref.simple_server import make_server
+        server = make_server('localhost', port, app)
+        port = "" if port == 80 else port
+        print("Getting topology from {}".format(unis))
+        print("Listening on {}{}{}".format('http://localhost',":" if port else "", port))
+        server.serve_forever()
+
+    conf = {'unis': None, 'port': 8000, 'debug': 0, 'size': 0, 'push': False,
+            'layout': ''}
+    conf.extend(_read_conf(args.config))
+    conf.extend({k:v for k,v in args.__dict__.items() if v is not None})
+    conf['debug'] = [logging.NOTSET, logging.INFO, logging.DEBUG][conf['debug']]
+    if isinstance(conf['unis'], str):
+        conf['unis'] = [str(u) for u in conf['unis'].split(',')]
+
+    log = logging.getLogger()
+    logging.trace.setLevel(conf['debug'])
+    log.setLevel(conf['debug'])
+
+    log.info("Configuration:")
+    for k,v in conf.items():
+        log.info("{:>8}: {}".format(k, v))
+    app = _get_app(conf['unis'], conf['layout'], conf['size'], conf['push'])
+    serve(conf['port'], app)
+
 if __name__ == "__main__":
     main()
