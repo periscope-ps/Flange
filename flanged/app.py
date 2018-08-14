@@ -39,17 +39,19 @@ class _Database(object):
             self._store[usr] = []
         self._store[usr].append(flangelet)
 
-def _build_graph(rt, size):
+def _build_graph(rt, size, push):
     rt.nodes.createIndex('name')
-    g = Graph.cluster_graph(int(pow(size, 0.5)), 1, db=rt)
+    g = Graph.power_graph(size, 1, db=rt)
+    if push:
+        g.finalize()
 
-def _get_app(unis, layout, size=None):
+def _get_app(unis, layout, size=None, push=False):
     conf = { "auth": True, "secret": "a4534asdfsberwregoifgjh948u12" }
     db = _Database()
     rt = Runtime(unis, proxy={'defer_update': True})
     rt.addService(UnisGrapher)
     if size:
-        _build_graph(rt, size)
+        _build_graph(rt, size, push)
     else:
         rt.nodes.load()
         rt.links.load()
@@ -86,6 +88,7 @@ def main():
     parser.add_argument('-p', '--port', default=8000, type=int, help='Set the port for the server')
     parser.add_argument('-d', '--debug', default=0, type=int, help='Set the log level')
     parser.add_argument('-s', '--size', default=0, type=int, help='Use a demo graph of the given size')
+    parser.add_argument('-p', '--push', action='store_true', help='When used with --size, pushes the generated graph to the back end data store for future use')
     parser.add_argument('--layout', default='', help='Set the default SVG layout for the topology')
     args = parser.parse_args()
     
@@ -93,7 +96,7 @@ def main():
     port = args.port
     layout = args.layout
     unis = [str(u) for u in args.unis.split(',')]
-    app = _get_app(unis, layout, args.size)
+    app = _get_app(unis, layout, args.size, args.push)
     
     from wsgiref.simple_server import make_server
     server = make_server('localhost', port, app)
