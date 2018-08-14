@@ -94,11 +94,10 @@ def _read_config(file_path):
         return
 
     config = parser['CONFIG']
-    print(config['unis']) 
     try:
         result = {'unis': json.loads(str(config['unis'])),
                   'debug': int(config['debug']),
-                  'port': int(config['port'])
+                  'port': int(config['port']),
                   'layout': config['layout']}
         
         return result
@@ -135,25 +134,26 @@ def main():
         from wsgiref.simple_server import make_server
         server = make_server('localhost', port, app)
         port = "" if port == 80 else port
-        print("Getting topology from {}".format(unis))
-        print("Listening on {}{}{}".format('http://localhost',":" if port else "", port))
+        log = logging.getLogger()
+        log.info("Listening on port {}".format(port))
         server.serve_forever()
 
-    conf = {'unis': None, 'port': 8000, 'debug': 0, 'size': 0, 'push': False,
+    conf = {'unis': None, 'port': 8000, 'debug': 1, 'size': 0, 'push': False,
             'layout': ''}
-    conf.extend(_read_conf(args.config))
-    conf.extend({k:v for k,v in args.__dict__.items() if v is not None})
-    conf['debug'] = [logging.NOTSET, logging.INFO, logging.DEBUG][conf['debug']]
+    conf.update(**_read_config(args.config))
+    conf.update(**{k:v for k,v in args.__dict__.items() if v is not None})
     if isinstance(conf['unis'], str):
         conf['unis'] = [str(u) for u in conf['unis'].split(',')]
 
     log = logging.getLogger()
-    logging.trace.setLevel(conf['debug'])
-    log.setLevel(conf['debug'])
+    levels = [logging.NOTSET, logging.INFO, logging.DEBUG]
+    logging.trace.setLevel(levels[max(0, conf['debug'] - 2)])
+    log.setLevel(levels[min(conf['debug'], 2)])
 
     log.info("Configuration:")
     for k,v in conf.items():
         log.info("{:>8}: {}".format(k, v))
+    log.info("Reading topology from {}...".format(conf['unis']))
     app = _get_app(conf['unis'], conf['layout'], conf['size'], conf['push'])
     serve(conf['port'], app)
 
