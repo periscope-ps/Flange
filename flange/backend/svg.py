@@ -1,8 +1,10 @@
 
+from functools import reduce
 from lace.logging import trace
-from flange import utils
-from flange.primitives.ops import _operation
 
+from flange import utils
+from flange.exceptions import ResolutionError
+from flange.primitives.ops import _operation
 
 @trace.info("svg")
 def create_path(path):
@@ -12,7 +14,7 @@ def create_path(path):
             rules.append((element, ""))
         if ty in ['node', 'function']:
             if ty == 'function':
-                name, element, body = item
+                name, element, body = element
                 rules.append((element, "register stream process - {}".format(name)))
         if i != 0 and i != len(path) - 1 and ty == 'node':
             rules.append((element, "l4_src: {}\nl4_dst: {}\nFORWARD\n> PORT {} TO {}".format(path[1][1].address.address,
@@ -21,7 +23,7 @@ def create_path(path):
     return rules
 
 @trace.info("svg")
-def run(program):
+def run(program, env):
     rules = []
     
     if not utils.runtime().graph.processing_level:
@@ -31,6 +33,10 @@ def run(program):
         if not isinstance(op, _operation):
             raise SyntaxError("Operation cannot be resolved into graph")
         for delta in op.__fl_next__():
+            try:
+                delta = reduce(lambda x,mod: mod(x, env), env.get('mods', []), delta)
+            except ResolutionError:
+                continue
             for element in delta:
                 if element[0] == "node":
                     if hasattr(element[1], "virtual") and element[1].virtual:

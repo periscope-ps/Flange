@@ -23,7 +23,7 @@ def find_objects(inst):
         return tuple(result)
 
 @trace.info("createobjects")
-def run(insts):
+def run(insts, env):
     result = []
     for inst in insts:
         result.append(find_objects(inst))

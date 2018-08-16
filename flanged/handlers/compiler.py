@@ -3,6 +3,7 @@ import json
 from unis.models import Flow
 
 from flange import compiler
+from flange.mods.user import filter_user, xsp_tag_user
 
 from flanged.handlers.base import _BaseHandler
 from flanged.handlers.utils import get_body
@@ -34,7 +35,8 @@ class CompileHandler(_BaseHandler):
         
     def compute(self, prog, ty="netpath"):
         try:
-            result = compiler.flange(prog, ty, 1, self.rt)
+            env = {'usr': self._usr, 'mods': [filter_user, xsp_tag_user]}
+            result = compiler.flange(prog, ty, 1, self.rt, env=env)
             #links = []
             #for path in result["netpath"]:
             #    path = json.loads(path)

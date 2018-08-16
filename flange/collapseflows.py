@@ -28,7 +28,7 @@ def find_flows(inst):
         return tuple(result)
 
 @trace.info("collapseflows")
-def run(insts):
+def run(insts, env):
     result = []
     for inst in insts:
         result.append(find_flows(inst))

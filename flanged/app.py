@@ -134,7 +134,7 @@ def main():
         from wsgiref.simple_server import make_server
         server = make_server('localhost', port, app)
         port = "" if port == 80 else port
-        log = logging.getLogger()
+        log = logging.getLogger('flange.flanged')
         log.info("Listening on port {}".format(port))
         server.serve_forever()
 

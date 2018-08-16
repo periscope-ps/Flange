@@ -56,7 +56,7 @@ def _parse(program):
     
 
 @trace.info("findlines")
-def run(program):
+def run(program, env):
     return _parse(program)
     
 

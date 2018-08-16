@@ -74,7 +74,6 @@ def build_query(inst, env):
         try:
             return construct(inst[3], _env)
         except AttributeError as exp:
-            print(exp)
             return False
     
     result = prim.query(_q(inst[1], inst[3]))
@@ -134,7 +133,7 @@ def _build_env(insts):
     return env
 
 @trace.info("buildpaths")
-def run(insts):
+def run(insts, env):
     result = []
     env = _build_env(insts)
     for inst in insts:

@@ -47,7 +47,7 @@ def _remove_ws(line):
 
 # in: list of program lines
 @trace.info("tokenizer")
-def run(program):
+def run(program, env):
     result = []
     for lnum, token in enumerate(program):
         _nospace = _tokenize(token, "(\s+)")

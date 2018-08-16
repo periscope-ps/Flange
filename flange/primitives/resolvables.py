@@ -127,11 +127,10 @@ class flow(_resolvable):
                     Port: "port",
                     Link: "link"
                 }
-                ty = None
                 for k, ty in tys.items():
                     if isinstance(element, k):
                         break
-                if not ty:
+                if all([not isinstance(element, k) for k in tys.keys()]):
                     raise CompilerError("Found unknown path element - {}".format(type(element)))
                 item = (ty, element)
                 if ty == "node":

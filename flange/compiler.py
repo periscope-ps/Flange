@@ -8,6 +8,8 @@ from flange import ast
 from flange import collapseflows
 from flange import createobjects
 from flange import buildpaths
+from flange.mods.xsp import xsp_forward, xsp_function
+from flange.mods.user import filter_user, xsp_tag_user
 from flange.backend import netpath, svg
 
 from lace.logging import DEBUG, INFO, CRITICAL
@@ -23,17 +25,18 @@ backends = {
 oldhook = sys.excepthook
 
 class pcode(object):
-    def __init__(self, frontend):
+    def __init__(self, frontend, env):
+        self._env = env
         self._fe = frontend
         
     def __getattribute__(self, n):
         if n in backends:
-            return backends[n].run(self._fe)
+            return backends[n].run(self._fe, self._env)
         else:
             return super().__getattribute__(n)
 
 @trace.info("compiler")
-def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes), breakpoint=None):
+def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes), breakpoint=None, env=None):
     if loglevel:
         trace.setLevel([CRITICAL, INFO, DEBUG][min(loglevel, 2)], True, showreturn=(loglevel > 2))
         trace.runInteractive(interactive)
@@ -46,21 +49,25 @@ def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes),
         sys.excepthook = oldhook
     _passes = passes[:firstn]
     for p in _passes:
-        program = p.run(program)
-        
-    return pcode(program)
+        program = p.run(program, env)
+
+    return pcode(program, env)
     
 
 @trace.info("compiler")
-def flange(program, backend="netpath", loglevel=None, db=None):
+def flange(program, backend="netpath", loglevel=None, db=None, env=None):
+    env = env or {"usr": "*"}
+    if 'mods' not in env:
+        env['mods'] = []
+    env['mods'].extend([filter_user, xsp_forward, xsp_function, xsp_tag_user])
     utils.runtime(db)
-    pcode = compile_pcode(program, loglevel)
+    pcode = compile_pcode(program, loglevel=loglevel, env=env)
     if isinstance(backend, list):
         result = {}
         for be in backend:
-            result[be] = getattr(pcode, be)
+            result[be] = getattr(pcode, be, env)
         return result
-    return getattr(pcode, backend)
+    return getattr(pcode, backend, env)
 
 
 

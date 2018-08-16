@@ -205,7 +205,7 @@ def program(inst, lno):
 # in: a list of lines, each line a list of tokens
 # out: a f-ast
 @trace.info("ast")
-def run(insts):
+def run(insts, env):
     ast = []
     for lnum, inst in enumerate(insts):
         ast.append(program(inst, lnum+1))
