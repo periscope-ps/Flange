@@ -5,7 +5,6 @@ def xsp_forward(path, env):
         for i, (ty, s) in enumerate(e):
             if ty == 'port':
                 if e[i+1][0] in ['node', 'function']:
-                    print(e[i+1][1])
                     try:
                         rule = {
                             'ip_src': src, 'ip_dst': dst,

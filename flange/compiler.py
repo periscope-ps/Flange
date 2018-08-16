@@ -78,6 +78,7 @@ def main():
                         help='File to compile')
     parser.add_argument('-o', '--output', type=str, default="out.d",
                         help='Output filename')
+    parser.add_argument('-u', '--unis', type=str, default='http://localhost:8888')
 
 
 
@@ -87,4 +88,4 @@ def main():
         program = f.read()
         
     with open(args.output, 'w') as f:
-        f.write(flange(program))
+        f.write(json.dumps(flange(program, db=args.unis)))
