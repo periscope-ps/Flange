@@ -37,6 +37,8 @@ class CompileHandler(_BaseHandler):
         try:
             env = {'usr': self._usr}
             result = compiler.flange(prog, ty, 1, self.rt, env=env)
+            from flange.utils import reset_rules
+            reset_rules.reset()
             #links = []
             #for path in result["netpath"]:
             #    path = json.loads(path)
