@@ -35,7 +35,7 @@ class CompileHandler(_BaseHandler):
         
     def compute(self, prog, ty="netpath"):
         try:
-            env = {'usr': self._usr, 'mods': [filter_user, xsp_tag_user]}
+            env = {'usr': self._usr}
             result = compiler.flange(prog, ty, 1, self.rt, env=env)
             #links = []
             #for path in result["netpath"]:
