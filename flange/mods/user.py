@@ -28,7 +28,7 @@ def xsp_tag_user(path, env):
                         'of_actions': [
                             {'SET_FIELD': {'action_type': 'SET_FIELD',
                                            'field': 'ip_dscp',
-                                           'value': 12}}
+                                           'value': 16}}
                         ]}
                     if rule not in s.rules:
                         s.rules.append(rule)
