@@ -59,7 +59,7 @@ def flange(program, backend="netpath", loglevel=None, db=None, env=None):
     env = env or {"usr": "*"}
     if 'mods' not in env:
         env['mods'] = []
-    env['mods'].extend([filter_user, xsp_forward, xsp_function, xsp_tag_user])
+    env['mods'].extend([filter_user, xsp_forward, xsp_function])
     utils.runtime(db)
     pcode = compile_pcode(program, loglevel=loglevel, env=env)
     if isinstance(backend, list):
