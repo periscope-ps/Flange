@@ -40,6 +40,21 @@ class CompileHandler(_BaseHandler):
             env = {'usr': self._usr}
             result = compiler.flange(prog, ty, 1, self.rt, env=env)
             
+            from flange.utils import reset_rules
+            reset_rules.reset()
+            #links = []
+            #for path in result["netpath"]:
+            #    path = json.loads(path)
+            #    for hop in path["hops"]:
+            #        if "directed" in hop:
+            #            links.append({'rel': 'full', 'href': hop["selfRef"]})
+            #    
+            #    flow = Flow({"hops": links})
+            #    flow.validate()
+            #    print(flow)
+            #    print(self.rt._pending)
+            #    self.rt.insert(Flow({ "hops": links }), commit=True)
+            
         except Exception as exp:
             import traceback
             traceback.print_exc()
