@@ -6,21 +6,6 @@ import flange.primitives as prim
 from flange import utils
 from flange.utils import monad, diad, nimp, recur
 
-@trace.debug("buildpaths")
-def lift_type(arg):
-    if isinstance(arg, str):
-        return prim.string(arg)
-    elif isinstance(arg, (int, float)):
-        return prim.number(arg)
-    elif isinstance(arg, bool):
-        return prim.boolean(arg)
-    elif isinstance(arg, type(None)):
-        return prim.empty(arg)
-    elif hasattr(arg, '__iter__'):
-        return prim.fl_list([lift_type(x) for x in arg])
-    else:
-        return trace
-
 @trace.info("buildpaths")
 def build_query(inst, env):
     @trace.debug("buildpaths.build_query")
@@ -96,22 +81,22 @@ def construct(inst, env):
         "or":    diad(lambda a,b: a.__union__(b), _curry),
         "not":   monad(lambda a: a.__complement__(), _curry),
         "query": lambda inst: build_query(inst, env),
-        "flow":  lambda inst: prim.flow([construct(x, env) for x in inst[1:]]),
+        "flow":  lambda inst: prim.flow(*[construct(x, env) for x in inst[1:]]),
+        "rules": lambda inst: [construct(rule, env) for rule in inst[1:]],
+        "hop":   lambda inst: prim.Rule(inst[1], *[construct(v, env) for v in inst[2:]]),
         "==":    diad(lambda a,b: a.__eq__(b), _curry),
         "!=":    diad(lambda a,b: a.__ne__(b), _curry),
         ">":     diad(lambda a,b: a.__gt__(b), _curry),
         ">=":    diad(lambda a,b: a.__ge__(b), _curry),
         "<":     diad(lambda a,b: a.__lt__(b), _curry),
         "<=":    diad(lambda a,b: a.__le__(b), _curry),
-        "index": lambda inst: lift_type(_curry(inst[1]).__getitem__(_curry(inst[2]))),
-        "attr":  lambda inst: lift_type(getattr(_curry(inst[2]), inst[1][1])),
+        "index": lambda inst: prim.lift_type(_curry(inst[1]).__getitem__(_curry(inst[2]))),
+        "attr":  lambda inst: prim.lift_type(getattr(_curry(inst[2]), inst[1][1])),
         "exists": lambda inst: prim.exists(construct(inst[1], env)),
         "forall": lambda inst: prim.forall(construct(inst[1], env))
     }
-    if isinstance(inst, tuple):
-        return ops[inst[0]](inst)
-    return inst
-
+    return ops[inst[0]](inst) if isinstance(inst, tuple) else inst
+    
 
 @trace.debug("buildpaths")
 def _build_env(insts):

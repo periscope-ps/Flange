@@ -2,6 +2,12 @@ import re
 
 from lace.logging import trace
 
+"""
+tokenizer takes a list of expressions and for 
+each one converts the expression string into 
+a list of tokens.
+"""
+
 @trace.debug("tokenizer")
 def _tokenize(line, sep, keep=False):
     return list(filter(None, re.split(sep, line)))

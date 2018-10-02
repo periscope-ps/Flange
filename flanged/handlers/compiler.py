@@ -1,5 +1,6 @@
 import falcon
 import json
+from lace import logging
 from unis.models import Flow
 
 from flange import compiler
@@ -10,6 +11,7 @@ from flanged.handlers.utils import get_body
 
 class CompileHandler(_BaseHandler):
     def __init__(self, conf, db, rt):
+        self._log = logging.getLogger('flange.flanged')
         self.rt = rt
         super().__init__(conf, db)
     
@@ -37,19 +39,7 @@ class CompileHandler(_BaseHandler):
         try:
             env = {'usr': self._usr}
             result = compiler.flange(prog, ty, 1, self.rt, env=env)
-            #links = []
-            #for path in result["netpath"]:
-            #    path = json.loads(path)
-            #    for hop in path["hops"]:
-            #        if "directed" in hop:
-            #            links.append({'rel': 'full', 'href': hop["selfRef"]})
-            #    
-            #    flow = Flow({"hops": links})
-            #    flow.validate()
-            #    print(flow)
-            #    print(self.rt._pending)
-            #    self.rt.insert(Flow({ "hops": links }), commit=True)
-                
+            
         except Exception as exp:
             import traceback
             traceback.print_exc()

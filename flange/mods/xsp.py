@@ -24,7 +24,7 @@ def xsp_forward(path, env):
         if e[0] == 'flow':
             assert e[2][0] == 'port' and e[-2][0] == 'port'
             src, dst = e[2][1].address.address, e[-2][1].address.address
-            flow = [e[0]]
+            flow = ['flow']
             flow.extend(_insert_rules(e[1:], src, dst))
             result.append(flow)
         else:

@@ -1,5 +1,36 @@
 from lace.logging import trace
 
+"""
+ast takes each list of tokens and converts the expression 
+into an abstract syntax tree (tok, block, ...)
+
+toks:
+
+flow
+query
+exists
+forall
+app
+index
+not
+and
+or
+var
+bool
+string
+number
+*
++
+-
+/
+==
+!=
+<
+<=
+>
+>=
+"""
+
 @trace.debug("ast")
 class _pcount(object):
     def __init__(self, reverse=False):

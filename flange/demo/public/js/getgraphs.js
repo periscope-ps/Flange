@@ -27,6 +27,21 @@ var _netpathShown = false;
 var _rulesShown = true;
 var rule_opacity = 0.6;
 
+function getCoords(path) {
+    var d = path.attr('d').substring(1).split('L');
+    var s = d[0].split(',')
+    var e = d[1].split(',')
+    return {
+	x1: s[0],
+	y1: s[1],
+	x2: e[0],
+	y2: e[1]
+    }
+}
+function setCoords(path, pairs) {
+    path.attr('d', "M" + pairs.x1 + "," + pairs.y1 + "L" + pairs.x2 + "," + pairs.y2)
+}
+
 function setgraph(data) {
     data = JSON.parse(data);
     if (data.hasOwnProperty('error')) {
@@ -51,14 +66,17 @@ function setgraph(data) {
 	var nx = locStore[key][0];
 	var ny = locStore[key][1];
 	target.attr("transform", "matrix(1 0 0 1 " + nx + " " + ny + ")");
-	$("line").each(function(index) {
-	    if ($(this).attr("x1") == cx && $(this).attr("y1") == cy) {
-		$(this).attr("x1", nx);
-		$(this).attr("y1", ny);
+	$("path").each(function(index) {
+	    var coords = getCoords($(this));
+	    if (coords.x1 == cx && coords.y1 == cy) {
+		coords.x1 = nx;
+		coords.y1 = ny;
+		setCoords($(this), coords)
 	    }
-	    else if ($(this).attr("x2") == cx && $(this).attr("y2") == cy) {
-		$(this).attr("x2", nx);
-		$(this).attr("y2", ny);
+	    else if (coords.x2 == cx && coords.y2 == cy) {
+		coords.x2 = nx;
+		coords.y2 = ny;
+		setCoords($(this), coords)
 	    }
 	});
     }
@@ -172,14 +190,17 @@ function moveSVG(event) {
 		var matrix = /matrix\(\s*([^\s,]+)[ ,]\s*([^\s,]+)[ ,]\s*([^\s,]+)[ ,]\s*([^\s,]+)[ ,]\s*([^\s,]+)[ ,]\s*([^\s,)]+)/.exec(transform);
 		var cx = Number(matrix[5]);
 		var cy = Number(matrix[6]);
-		$("line").each(function(index) {
-		    if ($(this).attr("x1") == cx && $(this).attr("y1") == cy) {
-			$(this).attr("x1", translateX);
-			$(this).attr("y1", translateY);
+		$("path").each(function(index) {
+		    var coords = getCoords($(this));
+		    if (coords.x1 == cx && coords.y1 == cy) {
+			coords.x1 = translateX;
+			coords.y1 = translateY;
+			setCoords($(this), coords);
 		    }
-		    if ($(this).attr("x2") == cx && $(this).attr("y2") == cy) {
-			$(this).attr("x2", translateX);
-			$(this).attr("y2", translateY);
+		    if (coords.x2 == cx && coords.y2 == cy) {
+			coords.x2 = translateX;
+			coords.y2 = translateY;
+			setCoords($(this), coords);
 		    }
 		});
 		locStore[eMove.id] = [cx, cy];
@@ -187,9 +208,11 @@ function moveSVG(event) {
 	    }
 	    else {
 		var matrix = 'matrix(1 0 0 1 ' + translateX + ' ' + translateY + ')';
-		var line = $("#f-svg").find("#" + eMove.id + "-line")[0];
-		line.setAttribute("x2", translateX + 26);
-		line.setAttribute("y2", translateY + 17);
+		var line = $("#f-svg").find("#" + eMove.id + "-line");
+		var coords = getCoords(line);
+		coords.x2 = translateX + 26;
+		coords.y2 = translateY + 17;
+		setCoords(line, coords);
 		$("#mask-" + eMove.id).attr("transform", matrix);
 	    }
 	}

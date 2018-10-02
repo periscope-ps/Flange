@@ -2,6 +2,11 @@
 from lace.logging import trace
 import flange.primitives as prim
 
+"""
+createobjects replaces all of the object ast
+leafs with native flange objects.
+"""
+
 builtins = {
     "number": prim.number,
     "string": prim.string,

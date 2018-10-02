@@ -54,7 +54,7 @@ def main():
     args = parser.parse_args()
     
     # Login to server
-    headers = { "Authorization": "Basic " + base64.b64encode("programmer:programmer".encode('utf-8')).decode('utf-8') }
+    headers = { "Authorization": "Basic " + base64.b64encode("admin:admin".encode('utf-8')).decode('utf-8') }
     token = requests.get(args.flanged + "/a", headers=headers).json()["Bearer"]
     
     trace.setLevel(logging.DEBUG)

@@ -4,7 +4,7 @@ import os
 
 import sys
 
-version = "0.1.dev0"
+version = "0.1.dev1"
 
 sys.path.append(".")
 if sys.version_info[0] < 3 or sys.version_info[1] < 5:
@@ -31,7 +31,7 @@ class tester(Command):
 setup(
     name="flanged",
     version=version,
-    packages=["flange", "flange.utils", "flange.primitives", "flange.backend", "flange.mods", "flanged", "flanged.handlers", "flanged.tests"],
+    packages=["flange", "flange.utils", "flange.primitives", "flange.backend", "flange.mods", "flange.measurements", "flanged", "flanged.handlers", "flanged.tests"],
     author="Joseph Cottam, Jeremy Musser",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     

@@ -1,10 +1,11 @@
 from lace.logging import trace
-from unis.models import Node, Port, Link
+from unis.models import Node
 
 
 from flange import utils
 from flange.exceptions import ResolutionError
 from flange.primitives._base import fl_object
+from flange.primitives.internal import Path
 
 LOOPCOUNT = 3
 
@@ -15,6 +16,7 @@ class _resolvable(fl_object):
 class query(_resolvable):
     @trace.debug("query")
     def __init__(self, q):
+        self.rejected = []
         self.__fl_members__ = q if isinstance(q, set) else set(utils.runtime().nodes.where(q))
     
     @property
@@ -73,15 +75,14 @@ class query(_resolvable):
 
 class flow(_resolvable):
     @trace.debug("flow")
-    def __init__(self, hops):
-        self.__fl_hops__ = hops
+    def __init__(self, source, sink, hops):
+        self.__fl_source__, self.__fl_sink__, self.__fl_hops__ = source, sink, hops
+        self.rejected = []
     
     @trace.debug("flow")
     def _getpaths(self):
-        source = self.__fl_hops__[0]
-        sink   = self.__fl_hops__[-1]
-        result = []
-        loops = 0
+        source, sink = self.__fl_source__, self.__fl_sink__
+        result, loops = [], 0
         
         fringe,lfringe = [[x] for x in source.__fl_members__], []
         
@@ -113,54 +114,33 @@ class flow(_resolvable):
                     path.append(node)
                     path.insert(0, origin[0])
                     if node in sink.__fl_members__:
-                        yield path
+                        yield Path(path)
                     f.append(path)
     
     @trace.debug("flow")
     def __fl_next__(self):
         for path in self._getpaths():
-            stack = list(self.__fl_hops__)
-            result = ["flow"]
-            for element in path:
-                tys = {
-                    Node: "node",
-                    Port: "port",
-                    Link: "link"
-                }
-                for k, ty in tys.items():
-                    if isinstance(element, k):
-                        break
-                if all([not isinstance(element, k) for k in tys.keys()]):
-                    raise CompilerError("Found unknown path element - {}".format(type(element)))
-                item = (ty, element)
-                if ty == "node":
-                    if element in stack[0].__fl_members__:
-                        if isinstance(stack[0], function):
-                            item = ("function", (stack[0].name, element, "function-body-here"))
-                        else:
-                            item = ("node", element)
-                        stack.pop(0)
-                result.append(item)
-                
-            if not stack:
-                yield set([tuple(result)])
-    
+            if all([rule.apply(path) for rule in self.__fl_hops__]):
+                yield set([path])
+            else:
+                self.rejected.append(path)
+
     @trace.debug("flow")
     def __union__(self, other):
         def _union():
-            for x in self.__fl_next__:
+            for x in self.__fl_next__():
                 yield x
-            for y in other.__fl_next__:
+            for y in other.__fl_next__():
                 yield y
-        result = flow()
+        result = flow(None, None, [])
         result.__fl_next__ = _union
         return result
         
     @trace.debug("flow")
     def __intersection__(self, other):
         def _inter():
-            for x in self.__fl_next__:
-                for y in other.__fl_next__:
+            for x in self.__fl_next__():
+                for y in other.__fl_next__():
                     yield x | y
         result = flow()
         result.__fl_next__ = _inter

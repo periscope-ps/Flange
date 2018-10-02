@@ -1,19 +1,32 @@
 from lace.logging import trace
 
+"""
+Native ast representations for flows are
+recursive, but the implication of a flow
+type is iterative.  collapseflows 
+flattens the flow ast node.
+
+(flow f1 a (flow f2 b c))
+=>
+(flow a c
+  (rules
+    (hop f1 a b)
+    (hop f2 b c)))
+"""
+
 @trace.info("collapseflows")
 def build_flow(flow):
     @trace.debug("collapseflow.build_flow")
-    def _collapse(item):
+    def _get_rules(item):
         if item[0] == "flow":
-            result = [item[2]]
-            result.extend(_collapse(item[3]))
+            nxt = item[3][2] if item[3][0] == "flow" else item[3]
+            rest, last = _get_rules(item[3])
+            return [("hop", item[1], item[2], nxt)] + rest, last
         else:
-            result = [item]
-        return result
-    
-    result = ["flow"]
-    result.extend(_collapse(flow))
-    return tuple(result)
+            return [], item
+
+    hops, last = _get_rules(flow)
+    return ("flow", flow[2], last, tuple(["rules"] + hops))
 
 @trace.info("collapseflows")
 def find_flows(inst):

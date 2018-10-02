@@ -129,10 +129,10 @@ def main():
                         'paremeters defined from a conf file. ex) flanged -c '
                         '/your/path/to/file.ini')
     args = parser.parse_args()
-   
+    
     def serve(port, app):
         from wsgiref.simple_server import make_server
-        server = make_server('localhost', port, app)
+        server = make_server('0.0.0.0', port, app)
         port = "" if port == 80 else port
         log = logging.getLogger('flange.flanged')
         log.info("Listening on port {}".format(port))
