@@ -1,11 +1,11 @@
 from unis import Runtime
 
-def reset():
-    rt = Runtime('http://localhost:8888')
+def reset(rt):
     for p in rt.ports:
         p.rules = []
 
     rt.flush()
 
 if __name__ == '__main__':
-    reset()
+    rt = Runtime('http://localhost:8888')
+    reset(rt)

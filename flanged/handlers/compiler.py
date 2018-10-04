@@ -26,11 +26,15 @@ class CompileHandler(_BaseHandler):
         if "netpath" not in ty:
             ty.append("netpath")
         try:
-            resp.body = self.compute(body["program"], ty)
-            resp.status = falcon.HTTP_200
+            delta = self.compute(body["program"], ty)
         except falcon.HTTPUnprocessableEntity as exp:
             resp.body = { "error": str(exp) }
             resp.status = falcon.HTTP_500
+            return
+
+        delta['ryu'] = self.build_ryu_json(json.loads(delta['netpath'][0]))
+        resp.body = delta
+        resp.status = falcon.HTTP_200
         
     def authorize(self, attrs):
         return True if "x" in attrs else False
@@ -41,19 +45,7 @@ class CompileHandler(_BaseHandler):
             result = compiler.flange(prog, ty, 1, self.rt, env=env)
             
             from flange.utils import reset_rules
-            reset_rules.reset()
-            #links = []
-            #for path in result["netpath"]:
-            #    path = json.loads(path)
-            #    for hop in path["hops"]:
-            #        if "directed" in hop:
-            #            links.append({'rel': 'full', 'href': hop["selfRef"]})
-            #    
-            #    flow = Flow({"hops": links})
-            #    flow.validate()
-            #    print(flow)
-            #    print(self.rt._pending)
-            #    self.rt.insert(Flow({ "hops": links }), commit=True)
+            reset_rules.reset(self.rt)
             
         except Exception as exp:
             import traceback
@@ -63,3 +55,21 @@ class CompileHandler(_BaseHandler):
         self.rt.flush()
         self._db.insert(self._usr, prog)
         return result
+
+
+    def build_ryu_json(self, npath):
+        requests = []
+        for ele in npath['hops']:
+            if 'ports' in ele and 'datapathid' in ele:
+                for p in ele['ports']:
+                    if 'rules' in p:
+                        for r in p['rules']:
+                            requests.append({
+                                'dpid': int(ele['datapathid']),
+                                'priority': 500,
+                                'match': {'nw_src': r['ip_src'],
+                                          'nw_dst': r['ip_src']},
+                                'action': r['of_actions']
+                            })
+        return requests
+        
