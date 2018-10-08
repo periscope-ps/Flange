@@ -42,7 +42,8 @@ setup(
     install_requires=[
         "falcon>=1.3.0",
         "bson",
-        "configparser"
+        "configparser",
+        "requests"
     ],
     entry_points = {
         'console_scripts': [
