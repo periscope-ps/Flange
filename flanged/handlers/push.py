@@ -24,7 +24,7 @@ class PushFlowHandler(_BaseHandler):
                 clean_rules(self.rt)
             except Exception as exp:
                 print(exp)
-            if mods['add'] or mods['remove']:
+            if (mods['add'] or mods['remove']) and self._conf['controller']:
                 print()
                 print("New Flow Rules: {}".format(self._conf['controller']))
                 print("  Adding Flows:")
