@@ -1,34 +1,28 @@
 import falcon
 import json
 
+from time import strftime as ftime
+from time import localtime as local
+
 from flanged.handlers.base import _BaseHandler
 from flanged.handlers.utils import get_body
 
 class SketchHandler(_BaseHandler):
-    def __init__(self, conf, db):
-        super(SketchHandler, self).__init__(conf, db)
-        self._other = True
+    def authorize(self, grants):
+        self._other = "ls" in grants
+        return True
     
     @falcon.before(_BaseHandler.do_auth)
     @falcon.after(_BaseHandler.encode_response)
     def on_get(self, req, resp, usr=None):
-        query = None
-        if not self._other:
-            if usr != self._usr:
-                raise falcon.HTTPUnauthorized("User is not privilaged to view other users flangelets")
-            query = self._db.find(self._usr)
-        elif usr:
-            query = self._db.find(body["usr"])
-        else:
-            query = self._db.find()
-        
-        result = []
-        for f in query:
-            result.append(f)
-        resp.body = result
+        def _make_record(ir):
+            f = "%Y-%m-%d %H:%M:%S"
+            return {"created": ftime(f, local(ir.created)),
+                    "modified": ftime(f, local(ir.modified)),
+                    "live": ir.live}
+        usr = usr or self._usr
+        if not self._other and usr != self._usr:
+            raise falcon.HTTPUnauthorized("User is not privilaged to view {}'s flangelets".format(usr))
+        resp.body = {ir.fid: _make_record(ir) for ir in self._db.find(usr=usr)}
         resp.status = falcon.HTTP_200
-    
-    def authorize(self, attrs):
-        self._other = True if "ls" in attrs else False
-        return True
-    
+

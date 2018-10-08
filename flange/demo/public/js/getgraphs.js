@@ -16,21 +16,17 @@ var source = [];
 var sink   = [];
 var locStore = {};
 
-var _editMode = false;
+var livesketch = false;
+var sketch_listener = false;
+
 var _modifySource = true;
 
-var _modeDown = false;
-var _submitDown = false;
-var _hideDown = false;
-var _netpathDown = false;
-var _netpathShown = false;
-var _rulesShown = true;
 var rule_opacity = 0.6;
 
 function getCoords(path) {
     var d = path.attr('d').substring(1).split('L');
-    var s = d[0].split(',')
-    var e = d[1].split(',')
+    var s = d[0].split(',');
+    var e = d[1].split(',');
     return {
 	x1: s[0],
 	y1: s[1],
@@ -39,43 +35,63 @@ function getCoords(path) {
     }
 }
 function setCoords(path, pairs) {
-    path.attr('d', "M" + pairs.x1 + "," + pairs.y1 + "L" + pairs.x2 + "," + pairs.y2)
+    path.attr('d', "M" + pairs.x1 + "," + pairs.y1 + "L" + pairs.x2 + "," + pairs.y2);
 }
 
 function setgraph(data) {
     data = JSON.parse(data);
+    console.log(data)
     if (data.hasOwnProperty('error')) {
 	$("#divGraph").html(data["error"]);
 	return;
     }
+    livesketch = (data.hasOwnProperty("fid") ? data['fid'] : false);
+    $("#flange").text((data.hasOwnProperty("text") ? data['text'] : ""));
     $("#divGraph").html(data["svg"]);
+
+    if (data.hasOwnProperty('live') && data['live']) {
+	$("#liveid").html(data['fid']);
+	$("#divLive").removeClass("hidden");
+    }
+    else 
+	$("#divLive").addClass("hidden");
+    
     if (data.hasOwnProperty('netpath')) {
 	for (var i=0; i < data["netpath"].length; i++) {
 	    if (typeof data["netpath"][i] === "string") {
 		data["netpath"][i] = JSON.parse(data["netpath"][i]);
 	    }
 	}
-	$("#divNetpath").html("<pre>" + JSON.stringify(data["netpath"], null, 2) + "</pre>");
+	$("#divNetpath pre").html(JSON.stringify(data["netpath"], null, 2));
     }
+    else
+	$("#divNetpath pre").html("");
+    if (data.hasOwnProperty('ryu')) {
+	for (var i=0; i < data['ryu'].length; i++) {
+	    if (typeof data['ryu'][i] === "string") {
+		data['ryu'][i] = JSON.parse(data['ryu'][i]);
+	    }
+	}
+	$("#divRyu pre").html(JSON.stringify(data["ryu"], null, 2));
+    }
+    else
+	$("#divRyu pre").html("");
+    
     for (var key in locStore) {
 	var target = $("#" + key);
 	var transform = target.attr("transform");
 	var matrix = /matrix\(\s*([^\s,]+)[ ,]\s*([^\s,]+)[ ,]\s*([^\s,]+)[ ,]\s*([^\s,]+)[ ,]\s*([^\s,]+)[ ,]\s*([^\s,)]+)/.exec(transform);
-	var cx = Number(matrix[5]);
-	var cy = Number(matrix[6]);
-	var nx = locStore[key][0];
-	var ny = locStore[key][1];
+	var cx = Number(matrix[5]), cy = Number(matrix[6]);
+	var nx = locStore[key][0], ny = locStore[key][1];
 	target.attr("transform", "matrix(1 0 0 1 " + nx + " " + ny + ")");
 	$("path").each(function(index) {
 	    var coords = getCoords($(this));
 	    if (coords.x1 == cx && coords.y1 == cy) {
-		coords.x1 = nx;
-		coords.y1 = ny;
+		coords.x1 = nx, coords.y1 = ny;
 		setCoords($(this), coords)
 	    }
 	    else if (coords.x2 == cx && coords.y2 == cy) {
-		coords.x2 = nx;
-		coords.y2 = ny;
+		coords.x2 = nx, coords.y2 = ny;
 		setCoords($(this), coords)
 	    }
 	});
@@ -105,8 +121,6 @@ function setgraph(data) {
     $("#gBuilderConfig").attr("display", "none");
     source = [];
     sink = [];
-    
-    
 }
 
 function dimRule(event) {
@@ -129,16 +143,6 @@ function highlightNode(event) {
     children.parent().append(children);
     $(this).parent().append($(this));
     $(this).attr('r', 8);
-}
-
-function postFlangelet() {
-    if ($("#flange").val()) {
-	data = { "program": $("#flange").val(), "type": "svg,netpath" };
-	$.post('f', data, setgraph);
-    }
-    else {
-	$.get('f', setgraph);
-    }
 }
 
 function matmult(m1, m2) {
@@ -269,30 +273,6 @@ function drawElement() {
     eMove.setAttribute('transform', matrix);
 }
 
-function submitDown(event) {
-    _submitDown = true;
-    $(this).find("rect").attr("fill", "rgb(40,40,255)")
-    return false;
-}
-
-function submitUp(event) {
-    if (_submitDown) {
-	postFlangelet();
-    }
-    submitReset(event);
-    return false;
-}
-
-function submitReset(event) {
-    $(event.currentTarget).find("rect").attr("fill", "rgb(80,80,255)");
-    _submitDown = false;
-}
-
-function modeDown(event) {
-    _modeDown = true;
-    $(this).find("rect").attr("fill", "rgb(40,40,255");
-}
-
 function buildQuery(event) {
     var name = $(event.currentTarget).find("title").html();
     if (_modifySource) {
@@ -317,8 +297,8 @@ function buildQuery(event) {
 	    $(event.currentTarget).addClass("sink");
 	}
     }
-    $("#btnSource").find("text").html("Source: " + source.length);
-    $("#btnSink").find("text").html("Sink: " + sink.length);
+    $("#btnSource").html("Source: " + source.length);
+    $("#btnSink").html("Sink: " + sink.length);
     setProgram();
 }
 
@@ -356,133 +336,152 @@ function setProgram() {
     $("#flange").val(program);
 }
 
-function modeUp(event) {
-    if (_modeDown) {
-	_modeDown = false;
-	if (_editMode) {
-	    $(this).find("text").text("Display Mode");
-	    $("#gBuilderConfig").attr("display", "none");
+function postFlange(btn) {
+    if ($("#flange").val()) {
+	data = { "program": $("#flange").val(), "type": "svg,netpath" };
+	$.post('f', data, setgraph);
+    }
+    else {
+	$.get('f', setgraph);
+    }
+}
+
+function load_livesketch(uid) {
+    if (uid) {
+	if (sketch_listener) clearInterval(sketch_listener);
+    
+	sketch_listener = setInterval(() => {
+	    $.get('q/' + uid, setgraph);
+	}, 500);
+    }
+    else {
+	clearInterval(sketch_listener);
+	$.get('f', setgraph);
+    }
+}
+
+function ryu_push(btn) {
+    $.post('p/' + livesketch);
+    load_livesketch(livesketch);
+}
+
+function toggle_rules(btn) {
+    if (btn.state()) {
+	$(".rules").attr("display", "none");
+    }
+    else {
+	$(".rules").attr("display", "inline");
+    }
+}
+
+function change_display_mode() {
+    let show = toggle($("#routebox"));
+    function _f(btn) {
+	if (btn.state()) {
+	    source = [], sink = [];
+	    var circle = $("circle");
+	    circle.click(buildQuery);
+	    circle.off("mousedown");
+	    circle.off("mouseup");
+	    $("#btnSource").html("Source: 0");
+	    $("#btnSink").html("Sink: 0");
+	    $(".active").removeClass("active").addClass("activeOff");
+	}
+	else {
 	    $(".activeOff").removeClass("activeOff source sink").addClass("active");
 	    var circle = $("circle");
 	    circle.off("click");
 	    circle.mousedown(startNode);
 	    circle.mouseup(stopNode);
-	    _editMode = false;
 	}
-	else {
-	    source = [];
-	    sink = [];
-	    $(this).find("text").text("Query Builder");
-	    var circle = $("circle");
-	    circle.click(buildQuery);
-	    circle.off("mousedown");
-	    circle.off("mouseup");
-	    $("#btnSource").find("text").html("Source: 0");
-	    $("#btnSink").find("text").html("Sink: 0");
-	    $(".active").removeClass("active").addClass("activeOff");
-	    $("#gBuilderConfig").attr("display", "inline");
-	    _editMode = true;
+	show(btn);
+    }
+    return _f;
+}
+
+function toggle_flangelet_list() {
+    let show = toggle($("#flangelet-list"));
+    let clear_data = () => {
+	$("#flangelet-list .button").off();
+	$("#flangelet-list > div").remove();
+    };
+    let header = $("<div class='header'><label></label><label>ID</label><label>Created</label><label>Modified</label><label>Live</label></div>");
+    function _f(btn) {
+	let select = k => {
+	    let _f = b => {
+		load_livesketch((k == livesketch ? false : k));
+		btn.state(0);
+	    };
+	    return _f;
+	};
+	
+	let flangelet_item = (k, d) => {
+	    let line = $("<div></div>");
+	    let cls = (k == livesketch ? ['active'] : []);
+	    let btn = Button.build(["Track"], line, select(k), cls);
+	    
+	    line.append("<label>" + k + "</label>");
+	    line.append("<label>" + d['created'] + "</label>");
+	    line.append("<label>" + d['modified'] + "</label>");
+	    if (d['live'])
+		line.append("<label></label>")
+	    return line;
+	};
+	
+	if (btn.state()) {
+	    clear_data();
+	    $.get('l', function(data) {
+		data = JSON.parse(data);
+		$("#flangelet-list").append(header);
+		for (key in data) {
+		    $("#flangelet-list").append(flangelet_item(key, data[key]));
+		}
+	    });
 	}
-	modeReset(event);
-	return false;
+	show(btn);
     }
+    return _f;
 }
 
-function modeReset(event) {
-    $(event.currentTarget).find("rect").attr("fill", "rgb(80,80,255)");
-    _modeDown = false;
-}
-
-function hideDown(event) {
-    _hideDown = true;
-    $(this).find("rect").attr("fill", "rgb(255,80,80)");
-}
-
-function hideUp(event) {
-    if (_hideDown) {
-	if (_rulesShown) {
-	    _rulesShown = false;
-	    $(".rules").attr("display", "none");
-	    $(this).find("text").text("Show Rules");
-	    $(this).find("text").attr("font-size", "12");
-	    $(this).find("text").attr("y", "16");
-	}
-	else {
-	    _rulesShown = true;
-	    $(".rules").attr("display", "inline");
-	    $(this).find("text").text("Hide Rules");
-	    $(this).find("text").attr("font-size", "13");
-	    $(this).find("text").attr("y", "17");
-	}
-    }
-    hideReset(event);
-    return false;
-}
-
-function hideReset(event) {
-    $(event.currentTarget).find("rect").attr("fill", "rgb(255,120,120)");
-    _hideDown = false;
-}
-
-function netpathDown(event) {
-    $(event.currentTarget).find("rect").attr("fill", "rgb(255,80,80)");
-    _netpathDown = true;
-}
-
-function netpathUp(event) {
-    if (_netpathShown) {
-	_netpathShown = false;
-	$(event.currentTarget).find("text").html("Show Netpath");
-	$(event.currentTarget).find("text").attr("x", "6");
-	$("#divNetpath").fadeOut(200, function() { 
-	    $("#divGraph").removeClass("hidden") 
-	});
-    }
-    else {
-	_netpathShown = true;
-	$(event.currentTarget).find("text").html("Hide Netpath");
-	$(event.currentTarget).find("text").attr("x", "9");
-	$("#divGraph").addClass("hidden");
-	$("#divNetpath").fadeIn(200);
-    }
-    netpathReset(event);
-    return false;
-}
-
-function netpathReset(event) {
-    $(event.currentTarget).find("rect").attr("fill", "rgb(255,120,120)");
-    _netpathDown = false;
+function toggle(target, others) {
+    let _f = (btn) => {
+	if (btn.state()) target.fadeIn(200);
+	else target.fadeOut(200);
+	if (others)
+	    for (i in others)
+		others[i].state(0);
+    };
+    return _f;
 }
 
 function init() {
     $.get('f', setgraph);
-    $("#btnPostFlangelet").mousedown(submitDown);
-    $("#btnPostFlangelet").mouseleave(submitReset);
-    $("#btnPostFlangelet").mouseup(submitUp);
-    $("#btnHideRules").mousedown(hideDown);
-    $("#btnHideRules").mouseleave(hideReset);
-    $("#btnHideRules").mouseup(hideUp);
-    $("#btnShowNetpath").mousedown(netpathDown);
-    $("#btnShowNetpath").mouseup(netpathUp);
-    $("#btnShowNetpath").mouseleave(netpathReset);
-    $("#btnGraphMode").mousedown(modeDown);
-    $("#btnGraphMode").mouseup(modeUp);
-    $("#btnGraphMode").mouseleave(modeReset);
-    $("#btnSource").click(function() { 
-	_modifySource = true; 
-	$("#btnSource").find("rect").attr("stroke", "rgb(220,100,100)"); 
-	$("#btnSink").find("rect").attr("stroke", "rgb(200,200,200)");
+
+    var show_sketches = Button.build(["Sketches", "Sketches"], $("#menu"), toggle_flangelet_list(), "", true);
+    
+    var submit_btn = Button.build(["Submit"], $("#cnt-code"), postFlange, ["emph"]);
+    var netpath_btn = Button.build(["Show Netpath", "Hide Netpath"], $("#sidebar"), toggle($("#divNetpath")));
+    netpath_btn.getRef().css({"width": "100px"})
+    var ryu_btn = Button.build(["Show Ryu", "Hide Ryu"], $("#divDisplay + .controls"), toggle($("#divRyu")));
+    ryu_btn.getRef().css({"width": "90px"});
+    var svg_mode_btn = Button.build(["Display Mode", "Query Builder"], $("#svg-btns"), change_display_mode(), ["emph"]);
+    var hide_btn = Button.build(["Hide Rules", "Show Rules"], $("#svg-btns"), toggle_rules, ["small"]);
+    var accept_ryu = Button.build(["Accept Changes"], $("#cnt-ryu"), ryu_push, ["emph"]);
+    
+    $("#btnSource").click(function() {
+	_modifySource = true;
+	$("#btnSource").addClass("selected");
+	$("#btnSink").removeClass("selected");
     });
-    $("#btnSink").click(function() { 
+    $("#btnSink").click(function() {
 	_modifySource = false;
-	$("#btnSource").find("rect").attr("stroke", "rgb(200,200,200)");
-	$("#btnSink").find("rect").attr("stroke", "rgb(220,100,100)");
+	$("#btnSource").removeClass("selected");
+	$("#btnSink").addClass("selected");
     });
     $("#flange").keypress(function (event) {
 	if ((event.which == 13 || event.which == 10) && event.ctrlKey) {
-	    postFlangelet();
+	    postFlange();
 	    return false;
 	}
     });
 }
-

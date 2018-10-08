@@ -3,5 +3,7 @@ from flanged.handlers.auth import AuthHandler
 from flanged.handlers.compiler import CompileHandler
 from flanged.handlers.validate import ValidateHandler
 from flanged.handlers.sketches import SketchHandler
+from flanged.handlers.query import QueryHandler
+from flanged.handlers.push import PushFlowHandler
 #from flanged.handlers.subscription import SubscriptionHandler
 from flanged.handlers.base import SSLCheck

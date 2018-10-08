@@ -1,21 +1,37 @@
+from flange.exceptions import ResolutionError
 
 def xsp_forward(path, env):
+    def _find_rules(rules, src, dst):
+        for i,r in enumerate(rules):
+            if getattr(r, 'ip_src', None) == src and getattr(r, 'ip_dst', None) == dst:
+                yield i
+    
     def _insert_rules(e, src, dst):
         result = []
         for i, (ty, s) in enumerate(e):
-            if ty == 'port':
+            if ty == 'port' and len(e) > i+2:
+                index = e[i+2][1].index
                 if e[i+1][0] in ['node', 'function']:
-                    try:
-                        rule = {
-                            'ip_src': src, 'ip_dst': dst,
-                            'of_actions': [
-                                {'OUTPUT': {'action_type': 'OUTPUT',
-                                            'port': e[i+2][1].index}}
-                            ]}
-                        if rule not in s.rules:
-                            s.rules.append(rule)
-                    except (AttributeError,IndexError):
-                        pass
+                    matches = list(sorted(_find_rules(s.rules, src, dst), key=lambda x: getattr(s.rules[x], 'priority', 0)))
+                    has_match = False
+                    for i, k in enumerate(matches):
+                        try:
+                            if any([a.OUTPUT.port == index for a in s.rules[k].of_actions]):
+                                has_match = True
+                                break
+                        except (AttributeError, IndexError):
+                            continue
+                    if has_match:
+                        for k in matches[i+1:]:
+                            s.rules[k]._fl_action = "delete"
+                    else:
+                        s.rules.append({
+                            "_fl_action": "create",
+                            "priority": max(500, s.rules[matches[-1]].priority + 1) if matches else 500,
+                            "ip_src": src, "ip_dst": dst,
+                            "of_actions": [{ "OUTPUT": {
+                                "action_type": "OUTPUT", "port": index
+                            }}]})
             result.append((ty, s))
         return result
     

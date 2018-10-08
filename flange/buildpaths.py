@@ -103,8 +103,7 @@ def _build_env(insts):
     env, deps = utils.build_dep_tree(insts)
     while deps:
         closer = False
-        keys = list(deps.keys())
-        for k in keys:
+        for k in list(deps.keys()):
             if not deps[k]:
                 closer = True
                 env[k] = construct(env[k], env)

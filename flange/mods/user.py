@@ -24,6 +24,7 @@ def xsp_tag_user(path, env):
                 if ty == 'port' and e[i+1][0] in ['node', 'function']:
                     tag = True
                     rule = {
+                        '_fl_action': "create",
                         'ip_src': src, 'ip_dst': dst,
                         'of_actions': [
                             {'SET_FIELD': {'action_type': 'SET_FIELD',

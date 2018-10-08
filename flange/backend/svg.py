@@ -13,7 +13,7 @@ def create_path(path):
                 name, element, body = element
                 rules.append((element, "register stream process - {}".format(name)))
         if i != 0 and i != len(path) - 1 and ty == 'node':
-            rules.append((element, "l4_src: {}\nl4_dst: {}\nFORWARD\n> PORT {} TO {}".format(path[1][1].address.address,
+            rules.append((element, "nw_src: {}\nnw_dst: {}\nFORWARD\n> PORT {} TO {}".format(path[1][1].address.address,
                                                                                              path[-2][1].address.address,
                                                                                              path[i -1][1].index, path[i + 1][1].index)))
     return rules

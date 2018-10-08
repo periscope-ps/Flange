@@ -3,11 +3,15 @@ from lace.logging import trace
 import flange.primitives as prim
 from flange.exceptions import CompilerError
 
-def build_rule(hop):
+def build_rule(hop, env):
     if hop[0] != "hop":
         raise CompilerError("Unknown rule type")
+    query = None if not hop[1] else hop[1] if hop[1][0] == 'query' else env[hop[1][1]]
 
-    def _getenv(n, p): # CHANGEME
+    def _getenv(n, p):
+        if n != query[1] and n not in env.keys():
+            raise CompilerError("Unknown symbol - {}".format(n))
+        return p if n == query[1] else env[n]
         if n != hop[1][1]:
             raise CompilerError("Flow Query may only reference query variable")
         return p
@@ -34,23 +38,30 @@ def build_rule(hop):
         }
         return ops[inst[0]] if isinstance(inst, tuple) else lambda p: inst
 
-    return ("hop", _query(hop[1][3]) if hop[1] else lambda p: True, hop[2], hop[3])
+    return ("hop", _query(query[3]) if query else lambda p: True, hop[2], hop[3])
 
-def find_rules(inst):
+def find_rules(inst, env):
     if not isinstance(inst, tuple) or not inst:
         return inst
     if inst[0] == "rules":
-        return tuple(["rules"] + [build_rule(h) for h in inst[1:]])
+        return tuple(["rules"] + [build_rule(h, env) for h in inst[1:]])
     else:
         result = [inst[0]]
         for item in inst[1:]:
-            result.append(find_rules(item))
+            result.append(find_rules(item, env))
         return tuple(result)
 
+def build_env(program):
+    env = {}
+    for inst in program:
+        if inst[0] == 'let':
+            env[inst[1]] = inst[2]
+    return env
 
 @trace.info("rules")
 def run(program, env):
     result = []
+    env = build_env(program)
     for inst in program:
-        result.append(find_rules(inst))
+        result.append(find_rules(inst, env))
     return tuple(result)
