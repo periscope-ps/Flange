@@ -2,6 +2,7 @@ import argparse, os, time
 import base64, json
 import requests, tornado, tornado.httpserver
 
+from configparser import ConfigParser
 from lace import logging
 from lace.logging import trace
 from tornado.web import url
@@ -161,7 +162,7 @@ def main():
 
     app.initialize()
     server = tornado.httpserver.HTTPServer(app)
-    server.listen(args.port)
+    server.listen(conf['port'])
     
     IOLoop.instance().start()
 
