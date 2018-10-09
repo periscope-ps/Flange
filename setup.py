@@ -46,7 +46,10 @@ setup(
         "falcon>=1.3.0",
         "bson",
         "configparser",
-        "requests"
+        "unisrt",
+        "lace",
+        "requests",
+        "tornado"
     ],
     entry_points = {
         'console_scripts': [
