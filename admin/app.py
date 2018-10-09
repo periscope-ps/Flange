@@ -108,13 +108,40 @@ class Flanged(tornado.web.Application):
             self.token, self.ttl = authenticate(href)
         return self.token
         
-                
+
+def _read_config(file_path):
+    if not file_path:
+        return {}
+    parser = ConfigParser(allow_no_value=True)
+    
+    try:
+        parser.read(file_path)
+    except Exception:
+        raise AttributeError("INVALID FILE PATH FOR STATIC RESOURCE INI.")
+
+    config = parser['CONFIG']
+    try:
+        return {'port': int(config['port']), 'flanged': config['flanged']}
+
+    except Exception as e:
+        print(e)
+        raise AttributeError('Error in config file, please ensure file is '
+                             'formatted correctly and contains values needed.')    
+    
 def main():
     parser = argparse.ArgumentParser(description="Demo application for flanged")
-    parser.add_argument('-p', '--port', default='8001')
-    parser.add_argument('-f', '--flanged', default='http://localhost:9001')
+    parser.add_argument('-p', '--port', type=int, help='Set the port for the '
+                        'server')
+    parser.add_argument('-f', '--flanged', type=str, help='Full url to the flanged'
+                        ' service')
+    parser.add_argument('-c', '--config', type=str, help='Start fladmin using '
+                        'paremeters defined from a conf file. ex) flanged -c '
+                        '/your/path/to/file.ini')
     args = parser.parse_args()
     
+    conf = {'port': '8001', 'flanged': 'http://localhost:9001'}
+    conf.update(**_read_config(args.config))
+    conf.update(**{k:v for k,v in args.__dict__.items() if v is not None})
     trace.setLevel(logging.DEBUG)
     ROOT = os.path.dirname(os.path.abspath(__file__)) + os.sep
     app = Flanged([url(r"/", MainHandler, { "path": ROOT }),

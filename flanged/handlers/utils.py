@@ -22,7 +22,7 @@ def build_ryu_json(npath):
                             'dpid': int(ele['datapathid']),
                             'priority': r.get('priority', 500),
                             'match': {'nw_src': r['ip_src'],
-                                      'nw_dst': r['ip_src']},
+                                      'nw_dst': r['ip_dst']},
                             'action': r['of_actions']
                         }
                         if action == "create":

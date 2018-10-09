@@ -4,7 +4,7 @@ import os
 
 import sys
 
-version = "0.1.dev1"
+version = "0.1.dev2"
 
 sys.path.append(".")
 if sys.version_info[0] < 3 or sys.version_info[1] < 5:
@@ -31,7 +31,10 @@ class tester(Command):
 setup(
     name="flanged",
     version=version,
-    packages=["flange", "flange.utils", "flange.primitives", "flange.backend", "flange.mods", "flange.measurements", "flanged", "flanged.handlers", "flanged.tests"],
+    package_data={
+        'admin': ['public/*', 'public/js/*.js', 'public/css/*.css']
+    },
+    packages=["flange", "flange.utils", "flange.primitives", "flange.backend", "flange.mods", "flange.measurements", "flanged", "flanged.handlers", "flanged.tests", "admin"],
     author="Joseph Cottam, Jeremy Musser",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     
@@ -48,7 +51,8 @@ setup(
     entry_points = {
         'console_scripts': [
             'flange = flange.compiler:main',
-            'flanged = flanged.app:main'
+            'flanged = flanged.app:main',
+            'fladmin = admin.app:main',
         ]
     },
     cmdclass={'test': tester },
