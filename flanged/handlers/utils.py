@@ -26,9 +26,9 @@ def build_ryu_json(npath):
                             'action': r['of_actions']
                         }
                         if "src_port" in r:
-                            record['tcp_src'] = r['src_port']
+                            record['match']['tcp_src'] = r['src_port']
                         if "dest_port" in r:
-                            record['tcp_dst'] = r['dest_port']
+                            record['match']['tcp_dst'] = r['dest_port']
                         if action == "create":
                             requests['add'].append(record)
                         elif action == "delete":
