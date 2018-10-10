@@ -1,4 +1,6 @@
 from flange.utils import runtime
+from flange.primitives._base import fl_object
+from flange.exceptions import CompilerError
 
 from functools import reduce
 from unis.measurements import Last
@@ -24,4 +26,27 @@ def StaticBuilder(prop, f, default):
     def func(path):
         links = [path[i][1] for i in range(1, len(path)) if path[i][0] == 'link']
         return reduce(lambda x,y: f([x,y]), [getattr(l, prop, default) for l in links])
+    return func
+
+
+class _flange_prop(fl_object):
+    def __init__(self, name):
+        self.name = name
+        self._value = None
+
+    @property
+    def value(self):
+        if isinstance(self._value, type(None)):
+            raise CompilerError("Property {} was not asserted to a value".format(self.name))
+        return self._value.__raw__()
+    
+    def __eq__(self, other):
+        self._value = other
+        return True
+        
+def PropertyBuilder(name):
+    def func(path):
+        prop = _flange_prop(name)
+        path.properties[name] = prop
+        return prop
     return func

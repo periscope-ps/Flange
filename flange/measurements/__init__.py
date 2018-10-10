@@ -1,1 +1,1 @@
-from flange.measurements._common import Builder, StaticBuilder
+from flange.measurements._common import Builder, StaticBuilder, PropertyBuilder

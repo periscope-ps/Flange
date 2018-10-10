@@ -3,11 +3,14 @@ from flange.primitives.logic import boolean, string, number, empty
 from flange.primitives.collections import fl_list
 from flange.primitives.ops import exists, forall
 from flange.primitives.internal import Rule, Path
+from flange.primitives import _base
 
 from lace.logging import trace
 
 @trace.debug("types")
 def lift_type(arg):
+    if isinstance(arg, _base.fl_object):
+        return arg
     if isinstance(arg, str):
         return string(arg)
     elif isinstance(arg, (int, float)):

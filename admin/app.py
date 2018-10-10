@@ -153,10 +153,10 @@ def main():
                        tornado.web.StaticFileHandler,
                        { "path": ROOT + "./public/css" }),
                    url(r"/f", FlangeHandler,
-                       {"href": args.flanged}),
-                   url(r"/l", ListHandler, {"href": args.flanged }),
-                   url(r"/q/([^/]+)", QueryHandler, {"href": args.flanged }),
-                   url(r"/p/([^/]+)", PushHandler, {"href": args.flanged })],
+                       {"href": conf['flanged']}),
+                   url(r"/l", ListHandler, {"href": conf['flanged'] }),
+                   url(r"/q/([^/]+)", QueryHandler, {"href": conf['flanged'] }),
+                   url(r"/p/([^/]+)", PushHandler, {"href": conf['flanged'] })],
                   autoreload = True,
                   template_path = ROOT + "public")
 

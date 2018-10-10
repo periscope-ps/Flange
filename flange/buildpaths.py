@@ -8,6 +8,8 @@ from flange.utils import monad, diad, nimp, recur
 
 @trace.info("buildpaths")
 def build_query(inst, env):
+    env = copy(env)
+    env[inst[1]] = inst[1]
     @trace.debug("buildpaths.build_query")
     def _invert(inst):
         ops = {
