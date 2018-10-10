@@ -10,7 +10,7 @@ class Path(object):
         self._path_attrs = {
             "throughput_mbps": measure.Builder("throughput", min, math.inf),
             "capacity_mbps": measure.StaticBuilder("capacity", min, math.inf),
-            "latency_ms": measure.Builder("histogram-rtt", sum, 0)
+            "latency_ms": measure.Builder("histogram-owdelay", sum, 0)
         }
         
         self.hops = hops
