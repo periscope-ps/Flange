@@ -37,7 +37,7 @@ class _flange_prop(fl_object):
     @property
     def value(self):
         if isinstance(self._value, type(None)):
-            raise CompilerError("Property {} was not asserted to a value".format(self.name))
+            return None
         return self._value.__raw__()
     
     def __eq__(self, other):

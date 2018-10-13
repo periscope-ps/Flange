@@ -15,6 +15,29 @@ class PushFlowHandler(_BaseHandler):
         self.rt = runtime(rt)
         super().__init__(conf, db)
 
+    def _push_to_ryu(self, mods):
+        if (mods['add'] or mods['modify']) and self._conf['controller']:
+            print()
+            print("New Flow Rules: {}".format(self._conf['controller']))
+            print("  Adding Flows:")
+            for add in mods['add']:
+                try:
+                    pprint(add)
+                    r = requests.post("{}/stats/flowentry/add".format(self._conf['controller']), data=json.dumps(add))
+                    print(r.status_code)
+                except ConnectionError as exp:
+                    print(exp)
+                    pass
+            print("  Modifying Flows:")
+            for modify in mods['modify']:
+                try:
+                    pprint(modify)
+                    requests.post("{}/stats/flowentry/modify".format(self._conf['controller']), data=json.dumps(modify))
+                    print(r.status_code)
+                except ConnectionError:
+                    pass
+            print()
+    
     def _track_flangelet(self, ir):
         print(self._conf)
         while True:
@@ -24,24 +47,7 @@ class PushFlowHandler(_BaseHandler):
                 clean_rules(self.rt)
             except Exception as exp:
                 print(exp)
-            if (mods['add'] or mods['remove']) and self._conf['controller']:
-                print()
-                print("New Flow Rules: {}".format(self._conf['controller']))
-                print("  Adding Flows:")
-                for add in mods['add']:
-                    try:
-                        pprint(add)
-                        requests.post("{}/stats/flowentry/add".format(self._conf['controller']), data=json.dumps(add))
-                    except ConnectionError:
-                        pass
-                print("  Removing Flows:")
-                for remove in mods['remove']:
-                    try:
-                        pprint(remove)
-                        requests.post("{}/stats/flowentry/delete".format(self._conf['controller']), data=json.dumps(remove))
-                    except ConnectionError:
-                        pass
-                print()
+            self._push_to_ryu(mods)
             time.sleep(1)
             
     
@@ -55,6 +61,8 @@ class PushFlowHandler(_BaseHandler):
     def on_post(self, req, resp, fid):
         self.tracking += 1
         ir = next(self._db.find(fid, self._usr))
+        #mods = build_ryu_json(json.loads(ir.get_record('netpath')[0]))
+        #self._push_to_ryu(mods)
         ir.live = True
 
         runner = Thread(target=self._track_flangelet, name="live_flangelet_{}".format(self.tracking), args=(ir,), daemon=True)

@@ -1,8 +1,10 @@
 import flange.measurements as measure
+from flange.measurements._common import _flange_prop
 
 import math
 
 from unis.models import Node, Port, Link
+from collections import defaultdict
 from functools import reduce
 
 class Path(object):
@@ -14,7 +16,7 @@ class Path(object):
             "l4_src": measure.PropertyBuilder("l4_src"),
             "l4_dst": measure.PropertyBuilder("l4_dst")
         }
-        self.properties = {}
+        self.properties = defaultdict(lambda: _flange_prop("<no_prop>"))
         self.hops = hops
 
     def __getattr__(self, n):

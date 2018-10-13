@@ -11,28 +11,40 @@ def get_body(fn):
     return _f
 
 def build_ryu_json(npath):
-    requests = {"add": [], "remove": []}
+    requests = {"add": [], "modify": []}
     for ele in npath['hops']:
         if 'ports' in ele and 'datapathid' in ele:
             for p in ele['ports']:
                 if 'rules' in p:
                     for r in p['rules']:
                         action = r.get("_fl_action", "maintain")
+                        of_actions = []
+                        for v in r['of_actions']:
+                            for d in v.values():
+                                if 'port' in d:
+                                    d['port'] = int(d['port'])
+                                if 'action_type' in d:
+                                    d['type'] = d['action_type']
+                                    del d['action_type']
+                                of_actions.append(d)
                         record = {
                             'dpid': int(ele['datapathid']),
                             'priority': r.get('priority', 500),
-                            'match': {'nw_src': r['ip_src'],
-                                      'nw_dst': r['ip_dst']},
-                            'action': r['of_actions']
+                            'match': {'ipv4_src': r['ip_src'],
+                                      'ipv4_dst': r['ip_dst'],
+                                      'eth_type': 2048},
+                            'actions': of_actions
                         }
                         if "src_port" in r:
                             record['match']['tcp_src'] = r['src_port']
-                        if "dest_port" in r:
-                            record['match']['tcp_dst'] = r['dest_port']
+                            record['match']['ip_proto'] = 6
+                        if "dst_port" in r:
+                            record['match']['tcp_dst'] = r['dst_port']
+                            record['match']['ip_proto'] = 6
                         if action == "create":
                             requests['add'].append(record)
-                        elif action == "delete":
-                            requests['remove'].append(record)
+                        elif action == "modify":
+                            requests['modify'].append(record)
     return requests
 
 def clean_rules(rt):

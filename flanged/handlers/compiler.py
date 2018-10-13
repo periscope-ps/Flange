@@ -21,6 +21,7 @@ class CompileHandler(_BaseHandler):
     @falcon.after(_BaseHandler.encode_response)
     @get_body
     def on_post(self, req, resp, body):
+        reset_rules.reset(self.rt)
         if "program" not in body:
             raise falcon.HTTPInvalidParam("Compilation request requires a program field", "program")
         ty = body.get("flags", {}).get("type", "netpath")
@@ -42,7 +43,6 @@ class CompileHandler(_BaseHandler):
         delta['fid'] = ir.fid
         delta['ryu'] = build_ryu_json(json.loads(delta['netpath'][0]))
         
-        clean_rules(self.rt)
         resp.body = delta
         resp.status = falcon.HTTP_200
         
