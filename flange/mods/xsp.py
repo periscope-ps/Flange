@@ -1,19 +1,24 @@
 from flange.exceptions import ResolutionError
 
 def xsp_forward(paths, env):
-    def _find_rules(rules, src, dst, l4_src, l4_dst):
+    key_map = {
+        "l4_src": "src_port", "l4_dst": "dst_port",
+        "ip_proto": "ip_proto"
+    }
+
+    def _find_rules(rules, src, dst, **kwargs):
         for i,r in enumerate(rules):
-            if getattr(r, 'ip_src', None) == src and getattr(r, 'ip_dst', None) == dst and \
-               getattr(r, 'src_port', None) == l4_src.value and getattr(r, 'dst_port', None) == l4_dst.value:
-                yield i
+            if all([getattr(r, key_map[k], None) == v.value for k,v in kwargs.items()]) and \
+               getattr(r, 'ip_src', None) == src and getattr(r, 'ip_dst', None) == dst:
+                    yield i
     
-    def _insert_rules(e, src, dst, l4_src, l4_dst):
+    def _insert_rules(e, src, dst, **kwargs):
         result = []
         for i, (ty, s) in enumerate(e):
             if ty == 'port' and len(e) > i+2:
                 index = e[i+2][1].index
                 if e[i+1][0] in ['node', 'function']:
-                    matches = list(sorted(_find_rules(s.rules, src, dst, l4_src, l4_dst), key=lambda x: getattr(s.rules[x], 'priority', 0)))
+                    matches = list(sorted(_find_rules(s.rules, src, dst, **kwargs), key=lambda x: getattr(s.rules[x], 'priority', 0)))
                     if matches:
                         match = False
                         for a in s.rules[matches[0]].of_actions:
@@ -35,10 +40,9 @@ def xsp_forward(paths, env):
                             "ip_src": src, "ip_dst": dst,
                             "of_actions": [{ "OUTPUT": { "action_type": "OUTPUT", "port": index }}]
                         }
-                        if not isinstance(l4_src.value, type(None)):
-                            rule['src_port'] = l4_src.value
-                        if not isinstance(l4_dst.value, type(None)):
-                            rule['dst_port'] = l4_dst.value
+                        for k,v in kwargs.items():
+                            if not isinstance(v.value, type(None)):
+                                rule[key_map[k]] = v.value
                         s.rules.append(rule)
             result.append((ty, s))
         return result
@@ -47,11 +51,8 @@ def xsp_forward(paths, env):
     for e in paths:
         if e[0] == 'flow':
             assert e[2][0] == 'port' and e[-2][0] == 'port'
-            l4_src = e.properties['l4_src']
-            l4_dst = e.properties['l4_dst']
             src, dst = e[2][1].address.address, e[-2][1].address.address
-            flow = ['flow']
-            flow.extend(_insert_rules(e[1:], src, dst, l4_src, l4_dst))
+            flow = ['flow'] + _insert_rules(e[1:], src, dst, **e.properties)
             result.append(flow)
         else:
             result.append(e)

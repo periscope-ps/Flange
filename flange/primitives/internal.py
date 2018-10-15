@@ -14,7 +14,8 @@ class Path(object):
             "capacity_mbps": measure.StaticBuilder("capacity", min, math.inf),
             "latency_ms": measure.Builder("histogram-owdelay", sum, 0),
             "l4_src": measure.PropertyBuilder("l4_src"),
-            "l4_dst": measure.PropertyBuilder("l4_dst")
+            "l4_dst": measure.PropertyBuilder("l4_dst"),
+            "ip_proto": measure.PropertyBuilder("ip_proto")
         }
         self.properties = defaultdict(lambda: _flange_prop("<no_prop>"))
         self.hops = hops

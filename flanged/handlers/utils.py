@@ -35,6 +35,8 @@ def build_ryu_json(npath):
                                       'eth_type': 2048},
                             'actions': of_actions
                         }
+                        if "ip_proto" in r:
+                            record['match']['ip_proto'] = r['ip_proto']
                         if "src_port" in r:
                             record['match']['tcp_src'] = r['src_port']
                             record['match']['ip_proto'] = 6
