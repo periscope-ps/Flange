@@ -34,7 +34,7 @@ setup(
     package_data={
         'admin': ['public/*', 'public/js/*.js', 'public/css/*.css']
     },
-    packages=["flange", "flange.utils", "flange.primitives", "flange.backend", "flange.mods", "flange.measurements", "flanged", "flanged.handlers", "flanged.tests", "admin"],
+    packages=["flange", "flange.tools", "flange.types", "flange.passes", "flange.utils", "flange.primitives", "flange.backend", "flange.mods", "flange.measurements", "flanged", "flanged.handlers", "flanged.tests", "admin"],
     author="Joseph Cottam, Jeremy Musser",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     

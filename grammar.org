@@ -8,17 +8,37 @@
    * The ~Graph~ object may contain zero or more ~Function~ objects
 
 * Language
-** Terminals
+** v0.2
+exists    := 'exists' <varlist> ':' <expr>
+forall    := 'forall' <varlist> ':' <expr>
+varlist   := (<type> SYM ',' <varlist>) | (<type> SYM)
+vallist   := <expr> ',' <vallist> | <expr>
+expr      := <exists> | <forall> | <logic_or> | <math_t1> | 
+             <attr> | <index> | <app>
+logic_or  := <expr> 'or' <expr> | <logic_and>
+logic_and := <expr> 'and' <expr> | <logic_not>
+logic_not := 'not' <expr> | <cmp>
+cmp       := <expr> ('='|'!='|'>'|'>='|'<'|'<=') <expr>
+math_t1   := <math_t1> ('+'|'-') <math_t1> | <math_t2>
+math_t2   := <math_t1> ('*'|'/'|'%') <math_t1> | <math_t3>
+math_t3   := NUM | STR | BOOL | EMPTY | SYM
+attr      := <expr> '.' <sym>
+index     := <expr> '[' <expr> ']'
+app       := <expr> '(' <vallist> ')'
+type      := SYM
+
+** v0.1
+*** Terminals
    num    = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
    char   = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R" | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z" | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i" | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r" | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" ; 
    sym    = "!" | "@" | "#" | "$" |"%" | "^" | "*" | "-" | "_";
    string = ('"', (" " | num | char | sym)*, '"') | ("'", (" " | num | char | sym)*, "'")
    bool   = "True" | "False"
    none   = "None"
-   var   = ("_" | sym | char), (sym | char | num)*
+   var    = ("_" | char), (sym | char | num)*
    ws     = " "
   
-** Logic
+*** Logic
    logic      = ("(", logic_or, ")") | logic_or
    logic_or   = (logic, ws+, "or", ws+, logic) | logic_and
    logic_and  = (logic, ws+, "and", ws+, logic) | logic_flow | logic_comp
@@ -35,11 +55,11 @@
    ls         = "[", ws*, logic*, ",", ws*, [logic], "]" | terms
    terms      = var | num | string | bool | none
    
-** Structure
+*** Structure
    program    = (let | resolve)+
    let        = "let ", var, ws*, "=", ws*, logic
    
-** Resolvables
+*** Resolvables
    exists    = "exists", ws+, logic
    forall    = "forall", ws+, logic
    resolve   = exists | forall
