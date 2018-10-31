@@ -111,9 +111,12 @@ class Flanged(tornado.web.Application):
         
 
 def _read_config(file_path):
+    class _Parser(ConfigParser):
+        def get(self, *args, **kwargs):
+            return super().get(*args, **kwargs).strip('"').strip("'")
     if not file_path:
         return {}
-    parser = ConfigParser(allow_no_value=True)
+    parser = _Parser(allow_no_value=True)
     
     try:
         parser.read(file_path)
@@ -122,7 +125,8 @@ def _read_config(file_path):
 
     config = parser['CONFIG']
     try:
-        return {'port': int(config['port']), 'flanged': config['flanged']}
+        return {'port': int(config['port'].strip('"').strip("'")),
+                'flanged': config['flanged'].strip('"').strip("'")}
 
     except Exception as e:
         print(e)
