@@ -1,6 +1,5 @@
 import argparse
 import json
-import time
 
 from flange import utils
 from flange import findlines
@@ -18,7 +17,7 @@ from lace.logging import DEBUG, INFO, CRITICAL
 from lace.logging import trace
 from uuid import uuid4
 
-import sys
+import sys, time
 
 passes = [findlines, tokenizer, ast, collapseflows, createobjects, rules, buildpaths]
 backends = {
@@ -26,6 +25,14 @@ backends = {
     "svg": svg
 }
 oldhook = sys.excepthook
+
+class _prof(object):
+    def __init__(self): self._m = []
+    def start(self, n): self._m.append((n, time.time()))
+    def end(self, n): self._m.append((n, time.time() - self._m.pop()[1]))
+    def __repr__(self): return "<times " + " ".join(["{}:{}".format(k, v) for k,v in self._m]) + ">"
+
+_p = _prof()
 
 class pcode(object):
     def __init__(self, raw, frontend, env):
@@ -40,7 +47,6 @@ class pcode(object):
         self.fid = str(uuid4())
         self._store = {}
 
-
     def reset(self):
         self._compiled = False
 
@@ -50,9 +56,13 @@ class pcode(object):
     def __getattribute__(self, n):
         if n in backends:
             if not self._compiled:
+                _p.start("path")
                 self._changes, self._rejected = buildchanges.run(self._fe, self._env)
+                _p.end("path")
                 self._compiled = True
+            _p.start("be")
             result = backends[n].run(self._changes, self._env)
+            _p.end("be")
             self._store[n] = result
             return result
         else:
@@ -74,21 +84,30 @@ def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes),
 
     return pcode(raw, program, env)
     
-
 @trace.info("compiler")
-def flange(program, backend="netpath", loglevel=None, db=None, env=None):
+def flange(program, backend="netpath", loglevel=None, db=None, env=None, **kwargs):
+    global _p
+    _p = _prof()
     env = env or {"usr": "*"}
     if 'mods' not in env:
         env['mods'] = []
     env['mods'].extend([xsp_forward, xsp_function, xsp_tag_user])
     utils.runtime(db)
+    _p = _prof()
+    _p.start("IR")
     pcode = compile_pcode(program, loglevel=loglevel, env=env)
+    _p.end("IR")
     if isinstance(backend, list):
         result = {}
         for be in backend:
             result[be] = getattr(pcode, be)
+        if kwargs.get('profile', None):
+            print(_p)    
         return result
-    return getattr(pcode, backend)
+    result = getattr(pcode, backend)
+    if kwargs.get('profile', None):
+        print(_p)
+    return result
 
 
 def _passwise(program, db):

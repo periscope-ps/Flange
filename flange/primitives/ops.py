@@ -41,6 +41,12 @@ class _operation(fl_object):
         #new.__resolve__ = _f
         #return new
 
+
+class gather(_operation):
+    def __fl_next__(self):
+        for res in self.__fl_operand__.__fl_gather__():
+            yield res
+        
 class exists(_operation):
     def __fl_next__(self):
         for res in self.__fl_operand__.__fl_next__():

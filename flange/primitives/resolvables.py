@@ -1,11 +1,12 @@
+from collections import defaultdict
 from lace.logging import trace
-from unis.models import Node
-
+from unis.models import Node, Link
+from functools import reduce
 
 from flange import utils
 from flange.exceptions import ResolutionError
 from flange.primitives._base import fl_object
-from flange.primitives.internal import Path
+from flange.primitives.internal import Path, PathError
 
 LOOPCOUNT = 3
 
@@ -53,6 +54,10 @@ class query(_resolvable):
                 result._members = self.__fl_members__
                 result.ports = list(self.__fl_fringe__)
                 yield set([("node", result)])
+
+    @trace.debug("query")
+    def __fl_gather__(self):
+        return self.__fl_next__()
     
     @trace.debug("query")
     def __union__(self, other):
@@ -74,17 +79,57 @@ class query(_resolvable):
 
 
 class flow(_resolvable):
+    class _gather(object):
+        def __init__(self, sink, max_congestion):
+            self.max_congestion, self.sink, self.weights = max_congestion, sink, defaultdict(lambda: 0)
+        
+        def _next_node(self, port):
+            ends, direct = port.link.endpoints, port.link.directed
+            if direct:
+                return ends.sink if port == ends.source else None
+            else:
+                return ends[1] if port == ends[0] else ends[0]
+
+        def accept(self, path):
+            for l in filter(lambda x: isinstance(x, Link), path):
+                self.weights[l] += 1
+            
+        def getpath(self, source):
+            loops, ccount, fringe, lfringe, rnt = 0, 1, [[source]], [], defaultdict(list)
+            visits = defaultdict(lambda: 0)
+            while loops < LOOPCOUNT and (fringe or lfringe):
+                if not fringe:
+                    if ccount < self.max_congestion:
+                        fringe, ccount = rnt[ccount], ccount + 1
+                    else:
+                        fringe, lfringe, loops = lfringe, [], loops + 1
+                    fringe = sorted(fringe, key=lambda x: sum([self.weights[l] for l in x if isinstance(l, Link)]))
+                else:
+                    path = fringe.pop(0)
+                    for port in path[-1].ports:
+                        if not hasattr(port, "link"): continue
+                        eport = self._next_node(port)
+                        if eport:
+                            new_path = path[:] + [port, port.link, eport, eport.node]
+                            visits[eport.node] += 1
+                            if self.weights[port.link] < ccount:
+                                if eport.node in self.sink:
+                                    yield new_path
+                                (lfringe if visits[eport.node] > loops+1 else fringe).append(new_path)
+                            else:
+                                rnt[self.weights[port.link]].append(new_path)
+                
     @trace.debug("flow")
     def __init__(self, source, sink, hops):
         self.__fl_source__, self.__fl_sink__, self.__fl_hops__ = source, sink, hops
         self.rejected = []
-    
+
     @trace.debug("flow")
-    def _getpaths(self):
-        source, sink = self.__fl_source__, self.__fl_sink__
+    def _getpaths(self, source=None):
+        source, sink = source or self.__fl_source__.__fl_members__, self.__fl_sink__
         result, loops = [], 0
         
-        fringe,lfringe = [[x] for x in source.__fl_members__], []
+        fringe,lfringe = [[x] for x in source], []
         
         while loops < LOOPCOUNT and (fringe or lfringe):
             if not fringe:
@@ -120,10 +165,37 @@ class flow(_resolvable):
     @trace.debug("flow")
     def __fl_next__(self):
         for path in self._getpaths():
-            if all([rule.apply(path) for rule in self.__fl_hops__]):
-                yield set([path])
-            else:
+            try:
+                p, subpaths = path, []
+                for rule in self.__fl_hops__:
+                    subpath, p = p.pathsplit(rule)
+                    subpaths.append(subpath)
+                if reduce(lambda p,rule: p.pathsplit(rule)[1], self.__fl_hops__, path):
+                    yield set([path])
+            except PathError:
                 self.rejected.append(path)
+
+    @trace.debug("flow")
+    def __fl_gather__(self):
+        paths = []
+        candidates = self._gather(self.__fl_sink__.__fl_members__, len(self.__fl_source__.__fl_members__) + 1)
+        for source in self.__fl_source__.__fl_members__:
+            for path in candidates.getpath(source):
+                candidate = Path(path)
+                try:
+                    i, r = 0, candidate
+                    for rule in self.__fl_hops__:
+                        l, r = r.pathsplit(rule)
+                        i += len(l) - 1
+                        if isinstance(rule.sink, function):
+                            if not any([fn.name == rule.sink.name for fn in candidate.annotations[i]]):
+                                candidate.annotations[i].append(rule.sink)
+                except PathError:
+                    continue
+                candidates.accept(path)
+                paths.append(candidate)
+                break
+        yield set(paths)
 
     @trace.debug("flow")
     def __union__(self, other):
@@ -155,8 +227,9 @@ class function(query):
         if isinstance(name, list):
             name = "_".join([x.name for x in name])
         self.name = name
-        self.__fl_members__ = set(utils.runtime().nodes.where(lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes")))
+        _q = lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes") and name in x.properties.executes
+        self.__fl_members__ = set(utils.runtime().nodes.where(_q))
 
     def __fl_next__(self):
         _, result = super().__fl_next__()
-        return set([("function", self.name, result)])
+        return set([("function", (self.name, result))])  # Need a way to embbed name, otherwise going to break a lot of things

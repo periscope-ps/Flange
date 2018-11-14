@@ -10,6 +10,7 @@ flow
 query
 exists
 forall
+gather
 app
 index
 not
@@ -225,7 +226,8 @@ def program(inst, lno):
     patterns = {
         "let": ("let", lambda x,y: x[0], "=", logic),
         "exists": ("exists", logic),
-        "forall": ("forall", logic)
+        "forall": ("forall", logic),
+        "gather": ("gather", logic)
     }
     result = _match_all(patterns, inst, lno)
     if not result:

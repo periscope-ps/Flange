@@ -30,5 +30,4 @@ def run(changes, env):
                 result.append(create_node(element[1]))
             elif element[0] == "flow":
                 result.append(create_path(element[1:]))
-                
     return result

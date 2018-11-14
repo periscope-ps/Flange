@@ -7,8 +7,11 @@ from unis.models import Node, Port, Link
 from collections import defaultdict
 from functools import reduce
 
-class Path(object):
-    def __init__(self, hops):
+class PathError(Exception):
+    pass
+
+class Path(object):    
+    def __init__(self, hops, properties=None):
         self._path_attrs = {
             "throughput_bps": measure.Builder("throughput", min, math.inf),
             "capacity_mbps": measure.StaticBuilder("capacity", min, math.inf),
@@ -17,8 +20,9 @@ class Path(object):
             "l4_dst": measure.PropertyBuilder("l4_dst"),
             "ip_proto": measure.PropertyBuilder("ip_proto")
         }
-        self.properties = defaultdict(lambda: _flange_prop("<no_prop>"))
+        self.properties = properties or defaultdict(lambda: _flange_prop("<no_prop>"))
         self.hops = hops
+        self.annotations = defaultdict(list)
 
     def __getattr__(self, n):
         if n in self._path_attrs.keys():
@@ -41,21 +45,16 @@ class Path(object):
         else:
             return "flow"
 
-    def subpath(self, sources, sinks):
-        result, inpath = [], False
-        for item in self.hops:
-            ty = self._get_type(item)
-            if not inpath:
-                if ty == "node" and item in sources:
-                    inpath = True
-            if inpath:
-                result.append(item)
-                if ty == "node" and item in sinks:
-                    new = Path(result)
-                    new.properties = self.properties
-                    return new
-        return []
+    def pathsplit(self, rule):
+        sources, sinks = rule.source.__fl_members__, rule.sink.__fl_members__
+        if self._get_type(self.hops[0]) != "node" or self.hops[0] not in sources:
+            raise PathError()
+        for i, item in enumerate(self.hops):
+            if self._get_type(item) == "node" and item in sinks:
+                return Path(self.hops[:i+1], self.properties), Path(self.hops[i:], self.properties)
+        raise PathError()
 
+    
     def __len__(self):
         return len(self.hops) + 1
 
@@ -72,7 +71,3 @@ class Rule(object):
         self.filter = f
         self.source = source
         self.sink = sink
-
-    def apply(self, path):
-        subpath = path.subpath(self.source.__fl_members__, self.sink.__fl_members__)
-        return subpath and self.filter(subpath)

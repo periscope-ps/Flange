@@ -95,7 +95,8 @@ def construct(inst, env):
         "index": lambda inst: prim.lift_type(_curry(inst[1]).__getitem__(_curry(inst[2]))),
         "attr":  lambda inst: prim.lift_type(getattr(_curry(inst[2]), inst[1][1])),
         "exists": lambda inst: prim.exists(construct(inst[1], env)),
-        "forall": lambda inst: prim.forall(construct(inst[1], env))
+        "forall": lambda inst: prim.forall(construct(inst[1], env)),
+        "gather": lambda inst: prim.gather(construct(inst[1], env))
     }
     return ops[inst[0]](inst) if isinstance(inst, tuple) else inst
     

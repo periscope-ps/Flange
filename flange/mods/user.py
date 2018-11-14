@@ -1,5 +1,5 @@
 from flange.exceptions import ResolutionError
-
+from flange.primitives.internal import Path
 
 def filter_user(path, env):
     def _is_valid(e):
@@ -33,7 +33,9 @@ def xsp_tag_user(path, env):
                         ]}
                     if rule not in s.rules:
                         s.rules.append(rule)
-            res.append((ty, s))
+            res.append(s)
+        res = Path(res, e.properties)
+        res.annotations = e.annotations
         return res
     
     if env['usr'] in ['*', 'admin']:
@@ -44,9 +46,7 @@ def xsp_tag_user(path, env):
         if e[0] == 'flow':
             assert e[2][0] == 'port' and e[-2][0] == 'port'
             src, dst = e[2][1].address.address, e[-2][1].address.address
-            ls = [e[0]]
-            ls.extend(_flow(e[1:], src, dst))
-            result.append(ls)
+            result.append(_flow(e[1:], src, dst))
         else:
             result.append(e)
         
