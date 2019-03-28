@@ -43,7 +43,7 @@ setup(
         "git+https://github.com/periscope-ps/unisrt.git/@develop#egg=unisrt",
     ],
     install_requires=[
-        "falcon>=1.3.0",
+        "falcon==1.4.1",
         "bson",
         "configparser",
         "unisrt",

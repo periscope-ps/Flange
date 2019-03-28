@@ -72,9 +72,6 @@ class pcode(object):
 def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes), breakpoint=None, env=None):
     raw = program
     print("Compiling on Env: {}".format(env))
-    if loglevel:
-        trace.setLevel([CRITICAL, INFO, DEBUG][min(loglevel, 2)], True, showreturn=(loglevel > 2))
-        trace.runInteractive(interactive)
     if breakpoint:
         trace.setBreakpoint(breakpoint)
     
