@@ -3,7 +3,6 @@ import base64, json
 import requests, tornado, tornado.httpserver
 
 from configparser import ConfigParser
-from lace import logging
 from lace.logging import trace
 from tornado.web import url
 from tornado.ioloop import IOLoop
@@ -147,7 +146,6 @@ def main():
     conf = {'port': '8001', 'flanged': 'http://localhost:9001'}
     conf.update(**_read_config(args.config))
     conf.update(**{k:v for k,v in args.__dict__.items() if v is not None})
-    trace.setLevel(logging.DEBUG)
     ROOT = os.path.dirname(os.path.abspath(__file__)) + os.sep
     app = Flanged([url(r"/", MainHandler, { "path": ROOT }),
                    url(r"/js/(.*)", 
