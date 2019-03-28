@@ -1,8 +1,9 @@
-import falcon
+import falcon, lace
 
 from flanged.handlers.base import _BaseHandler
 from flanged.handlers.utils import get_body
 
+@lace.logging.trace("flanged.graph")
 class GraphHandler(_BaseHandler):
     def __init__(self, conf, db, rt):
         self.rt = rt

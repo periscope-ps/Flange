@@ -1,6 +1,7 @@
 import argparse
 import falcon
 import json
+import lace, logging
 from configparser import ConfigParser
 from collections import defaultdict
 from unis import Runtime
@@ -115,7 +116,6 @@ def _read_config(file_path):
     
     
 def main():
-    from lace import logging
     parser = argparse.ArgumentParser(description='flanged provides a RESTful '
                                      'server for the processing and '
                                      'maintainance of flangelets.')
@@ -153,10 +153,15 @@ def main():
     if isinstance(conf['unis'], str):
         conf['unis'] = [str(u) for u in conf['unis'].split(',')]
 
-    log = logging.getLogger()
-    levels = [logging.NOTSET, logging.INFO, logging.DEBUG]
-    logging.trace.setLevel(levels[max(0, conf['debug'] - 2)])
-    log.setLevel(levels[min(conf['debug'], 2)])
+    log = logging.getLogger('flanged')
+    if conf['debug']:
+        levels = [lace.logging.NOTSET, lace.logging.INFO, lace.logging.DEBUG, lace.logging.TRACE_OBJECTS,
+                  lace.logging.TRACE_PUBLIC, lace.logging.TRACE_ALL]
+        stdout = logging.StreamHandler()
+        stdout.setFormatter(logging.Formatter("{color}[{levelname} {asctime} {name}]{reset} {message}", style="{"))
+        log.setLevel(levels[min(conf['debug'], 5)])
+        log.addHandler(stdout)
+        print(log)
 
     log.info("Configuration:")
     for k,v in conf.items():
