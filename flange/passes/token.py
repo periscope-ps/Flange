@@ -3,6 +3,52 @@ from flange.exceptions import FlangeSyntaxError
 
 from collections import defaultdict
 
+"""
+Pass 1: Tokenize
+
+Takes a single string program and returns the list of tokens.
+Token is implemented as a state machine and generates token based 
+on a ``stack`` storing the current working token.  Each transition
+contains a next state and stack actions, which may be any combination
+of ``"push"`` and ``"yield"``.
+
++-------+-----------------------------------------------------+
+| push  | Add the read character to the working stack         |
++-------+-----------------------------------------------------+
+| yield | Add the current working stack to the list of tokens |
++-------+-----------------------------------------------------+
+
+:class:`Tokens <flange.tools.token.Token>` are generated on each 
+``"yield"`` instruction and store line and character information
+for debugging.
+
+This pass raises an error if the EOF is reached while still in 
+a string state.
+
+
+**Rules**
+
+ - Whitespace is removed
+ - Strings generate a single token
+   - Both single and double quoted strings are allowed and uniquely close ('"' and "'" are valid)
+   - ``\`` escapes a string ("\"" is valid)
+ - [.0-9] yield single tokens containing any valid real number ( .5 notation allowed)
+ - [:)([\]+-/*%] all act as token delimiters.
+ - [<>!~] have the special property of optionally combining with an ``=`` to form a single token
+
+**Returns**
+
+``exists flow x, node a, node b: x(a, b)``
+
+yields
+
+[Token('exists', 0, 0), Token('flow', 7, 0), Token('x', 12, 0), Token(',', 8, 0),
+ Token('node', 10, 0), Token('a', 15, 0), Token(',', 16, 0), Token('node', 18, 0),
+ Token('b', 23, 0), Token(':', 24, 0), Token('x', 26, 0), Token('(', 27, 0),
+ Token('a', 28, 0), Token(',', 29, 0), Token('b', 31, 0), Token(')', 32, 0)]
+
+"""
+
 def_trans = {"base": ["base", ["push"]],
              "combine": ["base", ["yield", "push"]],
              "num": ["base", ["yield", "push"]],

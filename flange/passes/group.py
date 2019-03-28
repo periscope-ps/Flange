@@ -4,6 +4,16 @@ from flange.types import fl_str
 
 from collections import namedtuple
 
+"""
+Pass 2: Group
+
+Takes the :class:`Tokens <flange.tools.token.Token>` from pass 1 and builds groups out of lists
+and paren'd groups of :class:`Tokens <flange.tools.token.Token>`.
+
+
+
+"""
+
 _match = namedtuple("_match", ["ty", "val", "recur"])
 _match.__new__.__defaults__ = (True,)
 str_builder = lambda _,v: fl_str(v[0])

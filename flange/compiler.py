@@ -7,9 +7,6 @@ from flange.tools.block import Block, ast_pprint
 from flange.exceptions import CompilerError
 from flange.types import fl_obj
 
-from lace.logging import DEBUG, INFO, CRITICAL
-from lace.logging import trace
-
 def _print_exp(filename, program, exp):
     if isinstance(exp.token, Block):
         return _print_exp(filename, program, type(exp)(exp.msg, exp.token.tokens[0]))
