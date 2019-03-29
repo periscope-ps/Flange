@@ -1,6 +1,8 @@
 from flange.exceptions import ResolutionError
 from flange.primitives.internal import Path
 
+import logging
+
 def xsp_forward(paths, env):
     key_map = {
         "l4_src": "src_port",
@@ -18,8 +20,11 @@ def xsp_forward(paths, env):
         result = []
         for i, (ty, s) in enumerate(e):
             if ty == 'port' and len(e) > i+2:
-                index = e[i+2][1].index
-                if e[i+1][0] in ['node', 'function']:
+                try: index = e[i+2][1].properties.vport_number
+                except AttributeError: index = e[i+2][1].index
+                if not index:
+                    logging.getLogger('flange.OF').warn("No compatible index on OF port")
+                elif e[i+1][0] in ['node', 'function']:
                     matches = list(sorted(_find_rules(s.rules, src, dst, **props), key=lambda x: getattr(s.rules[x], 'priority', 0)))
                     if matches:
                         match = False
