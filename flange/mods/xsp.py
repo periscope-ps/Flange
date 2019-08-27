@@ -68,16 +68,33 @@ def xsp_forward(paths, env):
 
 def xsp_function(paths, env):
     result = set([])
-    def _add_function(e, fns):
+    def _add_function(e, fns, neg):
         if e[0] == 'node' and fns:
             for fn in fns:
                 if all([not r.function.name == fn.name for r in e[1].rules if hasattr(r, 'function')]):
-                    e[1].rules.append({"function": {"name": fn.name}})
+                    if not hasattr(e[1], 'functions'):
+                        e[1].extendSchema('functions', {})
+                        e[1].functions = { "create": [], "delete": [], "active": [] }
+                    s = e[1].functions
+                    if neg:
+                        if any([f.name == fn.name for f in s.create]):
+                            raise ResolutionError("Function '{}' in transient state on '{}'".format(fn.name, e[1].name))
+                        if any([f.name == fn.name for f in s.active]) and \
+                           all([f.name != fn.name for f in s.delete]):
+                            s.delete.append({'name': fn.name})
+                    else:
+                        if any([f.name == fn.name for f in s.delete]):
+                            raise ResolutionError("Function '{}' in transient state on '{}'".format(fn.name, e[1].name))
+                        if all([f.name != fn.name for f in list(s.active) + list(s.create)]):
+                            s.create.append({'name': fn.name})
         return e[1]
     for e in paths:
         if e[0] == 'flow':
             assert e[2][0] == 'port' and e[-2][0] == 'port'
-            flow = Path([_add_function(x, e.annotations[i+1]) for i, x in enumerate(e[1:])], e.properties)
+            flow = []
+            for i,x in enumerate(e[1:]):
+                flow.append(_add_function(x, e.annotations[i+1], e.negation))
+            flow = Path(flow, e.properties, negation=e.negation)
             flow.annotations = e.annotations
             result.add(flow)
         else:

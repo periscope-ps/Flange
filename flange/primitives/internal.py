@@ -10,8 +10,8 @@ from functools import reduce
 class PathError(Exception):
     pass
 
-class Path(object):    
-    def __init__(self, hops, properties=None):
+class Path(object):
+    def __init__(self, hops, properties=None, negation=False):
         self._path_attrs = {
             "throughput_bps": measure.Builder("throughput", min, math.inf),
             "capacity_mbps": measure.StaticBuilder("capacity", min, math.inf),
@@ -20,6 +20,7 @@ class Path(object):
             "l4_dst": measure.PropertyBuilder("l4_dst"),
             "ip_proto": measure.PropertyBuilder("ip_proto")
         }
+        self.negation = negation
         self.properties = properties or defaultdict(lambda: _flange_prop("<no_prop>"))
         self.hops = hops
         self.annotations = defaultdict(list)

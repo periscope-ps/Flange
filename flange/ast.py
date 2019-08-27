@@ -6,6 +6,8 @@ into an abstract syntax tree (tok, block, ...)
 
 toks:
 
+extern
+type
 flow
 query
 exists
@@ -102,14 +104,15 @@ def _csl(inst, lno):
     results = []
     for i, v in enumerate(inst):
         if not parens.isNested(v, lno) and v == ',':
-            results.append(logic(inst[current:i], lno))
+            results.append(logic_or(inst[current:i], lno))
             current = i+1
     if inst:
-        results.append(logic(inst[current:], lno))
+        results.append(logic_or(inst[current:], lno))
     return results
     
 def unnest(f):
     def _f(inst, lno):
+        if not inst: raise SyntaxError("Invalid syntax [line {}]".format(lno))
         if inst[0] == "(" and inst[-1] == ")":
             parens = _pcount()
             for v in inst[:-1]:
@@ -121,11 +124,30 @@ def unnest(f):
 
 @unnest
 @trace.info("ast")
-def logic(inst, lno):
-    return _match_all({"or": (logic, "or", logic)}, inst, lno) or logic_and(inst, lno)
+def logic_not(inst, lno):
+    return _match_all({"not": ("not", logic_or)}, inst, lno) or expr(inst, lno)
+@unnest
+@trace.info("ast")
+def logic_or(inst, lno):
+    return _match_all({"or": (logic_or, "or", logic_or)}, inst, lno) or logic_and(inst, lno)
+@unnest
 @trace.info("ast")
 def logic_and(inst, lno):
-    return _match_all({"and": (logic, "and", logic)}, inst, lno) or logic_flow(inst, lno)
+    return _match_all({"and": (logic_or, "and", logic_or)}, inst, lno) or logic_not(inst, lno)
+
+@unnest
+@trace.info("ast")
+def expr(inst, lno):
+    patterns = {
+        "exists": ("exists", logic_or),
+        "forall": ("forall", logic_or),
+        "gather": ("gather", logic_or)
+    }
+    result = _match_all(patterns, inst, lno)
+    if not result:
+        return logic_flow(inst, lno)
+    return result
+
 @trace.info("ast")
 def logic_flow(inst, lno):
     resolver = _match((query, "~", ">", logic_flow), inst, lno)
@@ -140,17 +162,14 @@ def logic_flow(inst, lno):
 @trace.info("ast")
 def logic_comp(inst, lno):
     patterns = {
-        "==": (logic, "==", logic),
-        "!=": (logic, "!=", logic),
-        "<":  (logic, "<" , logic),
-        "<=": (logic, "<=", logic),
-        ">":  (logic, ">", logic),
-        ">=": (logic, ">=", logic)
+        "==": (logic_or, "==", logic_or),
+        "!=": (logic_or, "!=", logic_or),
+        "<":  (logic_or, "<" , logic_or),
+        "<=": (logic_or, "<=", logic_or),
+        ">":  (logic_or, ">", logic_or),
+        ">=": (logic_or, ">=", logic_or)
     }
-    return _match_all(patterns, inst, lno) or logic_not(inst, lno)
-@trace.info("ast")
-def logic_not(inst, lno):
-    return _match_all({"not": ("not", logic)}, inst, lno) or math_add(inst, lno)
+    return _match_all(patterns, inst, lno) or math_add(inst, lno)
 @unnest
 @trace.info("ast")
 def math_add(inst, lno):
@@ -163,23 +182,23 @@ def app(inst, lno):
     return _match_all({"app": (app, "(", _csl, ")")}, inst, lno) or index(inst, lno)
 @trace.info("ast")
 def index(inst, lno):
-    return _match_all({"index": (app, "[", logic, "]")}, inst, lno) or attr(inst, lno)
+    return _match_all({"index": (app, "[", logic_or, "]")}, inst, lno) or attr(inst, lno)
 @trace.info("ast")
 def attr(inst, lno):
     parens = _pcount(reverse=True)
     for start in reversed(range(len(inst))):
         if not parens.isNested(inst[start], lno):
             if inst[start] == ".":
-                return ("attr", logic(inst[start+1:], lno), logic(inst[:start], lno))
+                return ("attr", logic_or(inst[start+1:], lno), logic_or(inst[:start], lno))
     return query(inst, lno)
 
 @trace.info("ast")
 def query(inst, lno):
-    resolver = _match(("{", var, "in", query, "|", logic, "}"), inst, lno)
+    resolver = _match(("{", var, "in", query, "|", logic_or, "}"), inst, lno)
     if resolver:
         flow = resolver("query")
         return ("query", flow[1][1], flow[2], flow[3])
-    resolver = _match(("{", var, "|", logic, "}"), inst, lno)
+    resolver = _match(("{", var, "|", logic_or, "}"), inst, lno)
     if resolver:
         flow = resolver("query")
         return ("query", flow[1][1], (), flow[2])
@@ -204,8 +223,8 @@ def terms(inst, lno):
             return ("bool", inst[0] == "True")
         if inst[0] == "None":
             return ("empty", None)
-        if inst[0].isdigit():
-            return ("number", int(inst[0]))
+        try: return ("number", float(inst[0]))
+        except ValueError: pass
         if inst[0][0] in ['"', "'"]:
             if inst[0][-1] == inst[0][0]:
                 return ("string", inst[0][1:-1])
@@ -224,16 +243,13 @@ def var(inst, lno):
 @trace.info("ast")
 def program(inst, lno):
     patterns = {
-        "let": ("let", lambda x,y: x[0], "=", logic),
-        "exists": ("exists", logic),
-        "forall": ("forall", logic),
-        "gather": ("gather", logic)
+        "extern": ("extern", lambda x,y: ("type", x[0], x[1])),
+        "let": ("let", lambda x,y: x[0], "=", logic_or),
     }
     result = _match_all(patterns, inst, lno)
     if not result:
-        raise SyntaxError("Unknown Syntax [line {}] - {}".format(lno, inst))
+        return logic_or(inst, lno)
     return result
-
 
 # in: a list of lines, each line a list of tokens
 # out: a f-ast

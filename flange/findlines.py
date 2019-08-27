@@ -51,7 +51,7 @@ def _parse(program):
             line[1] = line[1].strip()
             if not line[1]:
                 continue
-            re_str = "^(?P<op>let |[\"'{{0-9]|{}|{})".format(_syntax["var"],
+            re_str = "^(?P<op>let |[\"'{{0-9(]|{}|{})".format(_syntax["var"],
                                                              _syntax["decl"])
             handlers = { "let " : _make_let,
                          "exists ": _make_exists,

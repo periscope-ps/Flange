@@ -28,6 +28,29 @@ def _merge(line, lineno):
     return result
 
 @trace.debug("tokenizer")
+def _merge_num(line, lineno):
+    result = []
+    gen = iter(line)
+    while True:
+        try:
+            token = next(gen)
+            if token == ".":
+                try: nxt = next(gen)
+                except StopIteration: raise SyntaxError("Invalid syntax [line {}]".format(lineno))
+                try: prv = result.pop()
+                except IndexError: prv = 0
+
+                try:
+                    nxt, prv = int(nxt), int(prv)
+                    result.append("{}.{}".format(prv, nxt))
+                except ValueError:
+                    result.extend([prv, ".", nxt])
+            else:
+                result.append(token)
+        except StopIteration: break
+    return result
+
+@trace.debug("tokenizer")
 def _merge_str(line, lineno):
     result = []
     sofar = ""
@@ -62,6 +85,7 @@ def run(program, env):
             result[-1].extend(_tokenize(itok, "(\||&|=|!=|<|>|{|}|\[|\]|\+|-|/|\*|~|\(|\)|\.|,|:)"))
         result[-1] = _merge(result[-1], lnum)
         result[-1] = _merge_str(result[-1], lnum)
+        result[-1] = _merge_num(result[-1], lnum)
         result[-1] = _remove_ws(result[-1])
     return result
 

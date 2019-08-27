@@ -46,10 +46,13 @@ def build_dep_tree(program):
     for i, inst in enumerate(program):
         if inst[0] == "let":
             if inst[1] in deps:
-                raise SyntaxError("{} cannot be rebound [line {}]".format(inst[1], i))
+                raise SyntaxError("{} cannot rebind [line {}]".format(inst[1], i))
             deps[inst[1]] = _find_deps(inst[2])
             env[inst[1]]  = inst[2]
-            
+        if inst[0] == "extern":
+            if inst[1] in deps:
+                raise SyntaxError("{} cannot rebind [line {}]".format(inst[1], i))
+            env[inst[1]] = inst[2]
     return env, deps
 
 

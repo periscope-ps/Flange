@@ -4,7 +4,8 @@ from lace.logging import trace
 import flange.primitives as prim
 
 from flange import utils
-from flange.utils import monad, diad, nimp, recur
+from flange.utils import monad, diad, nimp, recur, build_dep_tree
+from flange.exceptions import CompilerError
 
 @trace.info("buildpaths")
 def build_query(inst, env):
@@ -70,10 +71,14 @@ def build_query(inst, env):
 
 @trace.info("buildpaths")
 def construct(inst, env):
+    def _envget(inst):
+        if inst[1] not in env:
+            raise CompilerError("Unknown symbol - {}".format(inst[1]))
+        return env[inst[1]]
     def _curry(inst):
         return construct(inst, env)
     ops = {
-        "var":   lambda inst: env.get(inst[1], prim.function(inst[1])),
+        "var":   _envget,
         "+":     diad(lambda a,b: a.__add__(b), _curry),
         "-":     diad(lambda a,b: a.__sub__(b), _curry),
         "/":     diad(lambda a,b: a.__div__(b), _curry),
@@ -116,7 +121,7 @@ def _build_env(insts):
                 del deps[k]
         if not closer:
             raise DependencyError("Co-dependent variables found, cannot resolve")
-            
+
     return env
 
 @trace.info("buildpaths")
@@ -124,6 +129,6 @@ def run(insts, env):
     result = []
     env = _build_env(insts)
     for inst in insts:
-        if inst[0] != "let":
+        if inst[0] not in ["let", "extern"]:
             result.append(construct(inst, env))
     return result

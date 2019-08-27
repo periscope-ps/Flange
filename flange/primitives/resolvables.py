@@ -11,15 +11,37 @@ from flange.primitives.internal import Path, PathError
 LOOPCOUNT = 3
 
 class _resolvable(fl_object):
+    def __init__(self):
+        self.annoations = {}
     def __fl_next__(self):
-        raise NotImplemented()
+        raise NotImplementedError()
+    def get_annoations(self):
+        return self.annoations
 
+def _ctx(fl_object):
+    def __init__(self, wrapped, attr):
+        self._in, self._attr = wrapped, attr
+        self.annotations = {}
+    def __getattr__(self, n):
+        if hasattr(self._in, n):
+            return object.__getattribute__(self._in, n)
+        else:
+            raise AttributeError("'{}' object has no attribute '{}'".format(self._in, n))
+    def __eq__(self, other):
+        self.annotations[self._attr] = other
+
+    def get_annotations(self):
+        return {**self.annoations, **self._in.get_annoations()}
 class query(_resolvable):
     @trace.debug("query")
     def __init__(self, q):
+        self.annotations = {}
         self.rejected = []
         self.__fl_members__ = q if isinstance(q, set) else set(utils.runtime().nodes.where(q))
-    
+
+    def __getattr__(self, n):
+        return _ctx(self, n)
+        
     @property
     def __fl_fringe__(self):
         if hasattr(self, "__fl_fringe_cache__"):
@@ -62,21 +84,23 @@ class query(_resolvable):
     @trace.debug("query")
     def __union__(self, other):
         if isinstance(other, query):
-            return query(self.__fl_members__ | other.__fl_members__)
+            result = query(self.__fl_members__ | other.__fl_members__)
         else:
-            raise TypeError("Cannot perform union on query and {}".format(type(other.__fl_type__)))
+            result = query(self.__fl_members__)
+        result.annotations = {**self.get_annoations(), **other.get_annoations()}
     
     @trace.debug("query")
     def __intersection__(self, other):
         if isinstance(other, query):
-            return query(self.__fl_members__ & other.__fl_members__)
+            result = query(self.__fl_members__ & other.__fl_members__)
         else:
-            raise TypeError("Cannot perform intersection on query and {}".format(type(other.__fl_type__)))
+            result = query(self.__fl_members__)
+        result.annoations = {**self.get_annoations(), **other.get_annotations()}
+        return result
 
     @trace.debug("query")
     def __complement__(self):
         return query(lambda x: x not in self.__fl_members__)
-
 
 class flow(_resolvable):
     class _gather(object):
@@ -118,10 +142,11 @@ class flow(_resolvable):
                                 (lfringe if visits[eport.node] > loops+1 else fringe).append(new_path)
                             else:
                                 rnt[self.weights[port.link]].append(new_path)
-                
+
     @trace.debug("flow")
     def __init__(self, source, sink, hops):
         self.__fl_source__, self.__fl_sink__, self.__fl_hops__ = source, sink, hops
+        self.negation = False
         self.rejected = []
 
     @trace.debug("flow")
@@ -159,16 +184,20 @@ class flow(_resolvable):
                     path.append(node)
                     path.insert(0, origin[0])
                     if node in sink.__fl_members__:
-                        yield Path(path)
+                        yield Path(path, negation=self.negation)
                     f.append(path)
     
     @trace.debug("flow")
     def __fl_next__(self):
         for path in self._getpaths():
             try:
-                p, subpaths = path, []
+                i, p, subpaths = 0, path, []
                 for rule in self.__fl_hops__:
                     subpath, p = p.pathsplit(rule)
+                    i += len(subpath) - 1
+                    if isinstance(rule.sink, function):
+                        if not any([fn.name == rule.sink.name for fn in path.annotations[i]]):
+                            path.annotations[i].append(rule.sink)
                     subpaths.append(subpath)
                 if reduce(lambda p,rule: p.pathsplit(rule)[1], self.__fl_hops__, path):
                     yield set([path])
@@ -181,7 +210,7 @@ class flow(_resolvable):
         candidates = self._gather(self.__fl_sink__.__fl_members__, len(self.__fl_source__.__fl_members__) + 1)
         for source in self.__fl_source__.__fl_members__:
             for path in candidates.getpath(source):
-                candidate = Path(path)
+                candidate = Path(path, self.negation)
                 try:
                     i, r = 0, candidate
                     for rule in self.__fl_hops__:
@@ -220,14 +249,16 @@ class flow(_resolvable):
     
     @trace.debug("flow")
     def __complement__(self):
-        raise TypeError("Type flow does not support complement")
+        self.negation = not self.negation
+        return self
     
 class function(query):
     def __init__(self, name):
         if isinstance(name, list):
             name = "_".join([x.name for x in name])
         self.name = name
-        _q = lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes") and name in x.properties.executes
+        _q = lambda x: hasattr(x, "properties") and hasattr(x.properties, "executes") and \
+             (x.properties.executes == "*" or name in x.properties.executes)
         self.__fl_members__ = set(utils.runtime().nodes.where(_q))
 
     def __fl_next__(self):

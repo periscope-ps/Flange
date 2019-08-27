@@ -56,6 +56,8 @@ def build_env(program):
     for inst in program:
         if inst[0] == 'let':
             env[inst[1]] = inst[2]
+        elif inst[0] == 'extern':
+            env[inst[1]] = inst[2]
     return env
 
 @trace.info("rules")

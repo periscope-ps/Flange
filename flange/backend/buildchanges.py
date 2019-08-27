@@ -14,7 +14,9 @@ def run(program, env):
             try:
                 path = reduce(lambda x,mod: mod(x, env), env.get('mods', []), delta)
                 break
-            except ResolutionError:
+            except ResolutionError as e:
+                if env.get('logging', 0) >= 1:
+                    print("  [ResolutionError]", e)
                 #rejected.append(delta)
                 continue
 
