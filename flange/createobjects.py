@@ -16,7 +16,7 @@ builtins = {
 }
 
 extern_types = {
-    "func": prim.function
+    "func": prim.Function
 }
 
 

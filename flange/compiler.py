@@ -13,6 +13,7 @@ from flange.mods.xsp import xsp_forward, xsp_function
 from flange.mods.user import filter_user, xsp_tag_user
 from flange.backend import netpath, svg, buildchanges, waggle
 from flange.exceptions import CompilerError as FlangeCompilerError
+from flange.primitives import assertions
 
 from pprint import pprint
 from lace.logging import DEBUG, INFO, CRITICAL
@@ -42,17 +43,26 @@ class pcode(object):
         self._env = env
         self._fe = frontend
         self._compiled = False
-        self._changes, self._rejected = [], []
+        self._changes = []
         self.created, self.modified = int(time.time()), int(time.time())
         self.text = raw
         self.live = False
         self.generated = int(time.time())
         self.fid = str(uuid4())
         self._store = {}
+        self.interest = []
+        self.dirty = False
 
     def reset(self):
         self._compiled = False
 
+    def recompile(self):
+        self._store, self._fe = {}, self.text
+        for p in passes:
+            self._fe = p.run(self._fe, self._env)
+        self._changes, self.interest = buildchanges.run(self._fe, self._env)
+        return self._changes
+    
     def get_record(self, n):
         return self._store[n]
 
@@ -60,7 +70,7 @@ class pcode(object):
         if n in backends:
             if not self._compiled:
                 _p.start("path")
-                self._changes, self._rejected = buildchanges.run(self._fe, self._env)
+                self._changes, self.interest = buildchanges.run(self._fe, self._env)
                 _p.end("path")
                 self._compiled = True
             _p.start("be")
@@ -71,9 +81,22 @@ class pcode(object):
         else:
             return super().__getattribute__(n)
 
+def get_mods(ls):
+    result = []
+    for p in ls:
+        if isinstance(p, str):
+            import importlib
+            path = p.split(".")
+            module = importlib.import_module(".".join(path[:-1]))
+            result.append(getattr(module, path[-1]))
+        else:
+            result.append(p)
+    return result
+
 @trace.info("compiler")
 def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes), breakpoint=None, env=None):
     raw = program
+    env['mods'] = get_mods(env['mods'])
     print("Compiling on Env: {}\n".format(env))
     if breakpoint:
         trace.setBreakpoint(breakpoint)
@@ -86,7 +109,7 @@ def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes),
             pprint(program)
 
     return pcode(raw, program, env)
-    
+
 @trace.info("compiler")
 def flange(program, backend="netpath", loglevel=None, db=None, env=None, **kwargs):
     global _p
@@ -95,6 +118,7 @@ def flange(program, backend="netpath", loglevel=None, db=None, env=None, **kwarg
         env = env or {"usr": "*"}
         env.setdefault('mods', [xsp_forward, xsp_function, xsp_tag_user])
         env.setdefault('logging', loglevel)
+        assertions.LOOPCOUNT = env.setdefault('searchdepth', 1)
         utils.runtime(db)
         _p = _prof()
         _p.start("IR")
@@ -144,13 +168,8 @@ def main():
 
     env = {}
     if args.plugin:
-        env['mods'] =[]
-        for p in args.plugin:
-            import importlib
-            path = p.split(".")
-            module = importlib.import_module(".".join(path[:-1]))
-            env['mods'].append(getattr(module, path[-1]))
-
+        env['mods'] = get_mods(args.plugin)
+        
     with open(args.output, 'w') as f:
         if not args.debugmode:
             f.write(json.dumps(flange(program, loglevel=args.verbose, backend=args.backend, env=env, db=args.unis), indent=2))

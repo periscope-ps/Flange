@@ -1,8 +1,8 @@
-from flange.primitives.resolvables import query, flow, function
+from flange.primitives.resolvable import And, Or, Not, Exists, Forall, Gather
 from flange.primitives.logic import boolean, string, number, empty
 from flange.primitives.collections import fl_list
-from flange.primitives.ops import exists, forall, gather
-from flange.primitives.internal import Rule, Path
+from flange.primitives.assertions import Flow, Query, Function
+from flange.primitives.internal import Rule, Path, Solution
 from flange.primitives import _base
 
 from lace.logging import trace

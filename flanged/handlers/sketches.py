@@ -14,7 +14,7 @@ class SketchHandler(_BaseHandler):
     
     @falcon.before(_BaseHandler.do_auth)
     @falcon.after(_BaseHandler.encode_response)
-    def on_get(self, req, resp, usr=None):
+    def on_get(self, req, resp, usr=None, fid=None):
         def _make_record(ir):
             f = "%Y-%m-%d %H:%M:%S"
             return {"created": ftime(f, local(ir.created)),
@@ -25,4 +25,3 @@ class SketchHandler(_BaseHandler):
             raise falcon.HTTPUnauthorized("User is not privilaged to view {}'s flangelets".format(usr))
         resp.body = {ir.fid: _make_record(ir) for ir in self._db.find(usr=usr)}
         resp.status = falcon.HTTP_200
-

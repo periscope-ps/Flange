@@ -64,7 +64,7 @@ def build_query(inst, env):
         except AttributeError as exp:
             return False
     
-    result = prim.query(_q(inst[1], inst[3]))
+    result = prim.Query(_q(inst[1], inst[3]))
     if inst[2]:
         return result.__intersection__(construct(inst[2], env))
     return result
@@ -88,7 +88,7 @@ def construct(inst, env):
         "or":    diad(lambda a,b: a.__union__(b), _curry),
         "not":   monad(lambda a: a.__complement__(), _curry),
         "query": lambda inst: build_query(inst, env),
-        "flow":  lambda inst: prim.flow(*[construct(x, env) for x in inst[1:]]),
+        "flow":  lambda inst: prim.Flow(*[construct(x, env) for x in inst[1:]]),
         "rules": lambda inst: [construct(rule, env) for rule in inst[1:]],
         "hop":   lambda inst: prim.Rule(inst[1], *[construct(v, env) for v in inst[2:]]),
         "==":    diad(lambda a,b: a.__eq__(b), _curry),
@@ -99,9 +99,9 @@ def construct(inst, env):
         "<=":    diad(lambda a,b: a.__le__(b), _curry),
         "index": lambda inst: prim.lift_type(_curry(inst[1]).__getitem__(_curry(inst[2]))),
         "attr":  lambda inst: prim.lift_type(getattr(_curry(inst[2]), inst[1][1])),
-        "exists": lambda inst: prim.exists(construct(inst[1], env)),
-        "forall": lambda inst: prim.forall(construct(inst[1], env)),
-        "gather": lambda inst: prim.gather(construct(inst[1], env))
+        "exists": lambda inst: prim.Exists(construct(inst[1], env)),
+        "forall": lambda inst: prim.Forall(construct(inst[1], env)),
+        "gather": lambda inst: prim.Gather(construct(inst[1], env))
     }
     return ops[inst[0]](inst) if isinstance(inst, tuple) else inst
     

@@ -24,12 +24,13 @@ class CompileHandler(_BaseHandler):
         reset_rules.reset(self.rt)
         if "program" not in body:
             raise falcon.HTTPInvalidParam("Compilation request requires a program field", "program")
-        ty = body.get("flags", {}).get("type", "netpath")
+        flags = body.get("flags", {})
+        ty = flags.get("type", "netpath")
+        mods = flags.get("mods", [])
         tys = ty if isinstance(ty, list) else [ty]
-        if "netpath" not in tys:
-            tys.append("netpath")
+        print(tys, mods)
         try:
-            ir = self.compute(body["program"], ty)
+            ir = self.compute(body["program"], tys, mods)
         except falcon.HTTPUnprocessableEntity as exp:
             resp.body = { "error": str(exp) }
             resp.status = falcon.HTTP_500
@@ -38,20 +39,28 @@ class CompileHandler(_BaseHandler):
         self._db.insert(self._usr, ir)
 
         delta = {}
+        if 'netpath' not in tys: delta['netpath'] = {}
         for ty in tys:
             delta[ty] = getattr(ir, ty)
         delta['fid'] = ir.fid
-        delta['ryu'] = build_ryu_json(json.loads(delta['netpath'][0]))
-        
+        if 'ryu' in tys:
+            try:
+                delta['ryu'] = build_ryu_json(json.loads(delta['netpath'][0]))
+            except Exception as e:
+                self._log.error("Graph missing critical attributes for generating 'netpath' - {}".format(e))
+                delta['ryu'] = {}
+        else: delta['ryu'] = {}
+
+        self.rt.flush()
         resp.body = delta
         resp.status = falcon.HTTP_200
         
     def authorize(self, attrs):
         return True if "x" in attrs else False
         
-    def compute(self, prog, ty="netpath"):
+    def compute(self, prog, ty="netpath", mods=None):
         try:
-            env = {'usr': self._usr, 'mods': [xsp_forward]}
+            env = {'usr': self._usr, 'mods': mods or [xsp_forward]}
             result = compiler.compile_pcode(prog, 1, env=env)
             
         except Exception as exp:
@@ -59,4 +68,4 @@ class CompileHandler(_BaseHandler):
             traceback.print_exc()
             raise falcon.HTTPUnprocessableEntity(exp)
         
-        return result        
+        return result

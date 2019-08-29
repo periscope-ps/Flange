@@ -338,7 +338,9 @@ function setProgram() {
 
 function postFlange(btn) {
     if ($("#flange").val()) {
-	data = { "program": $("#flange").val(), "type": "svg,netpath" };
+	tys = $("#txtbackends").val() || "svg,netpath";
+	mods = $("#txtmods").val();
+	data = { "program": $("#flange").val(), "type": tys, "mods": mods };
 	$.post('f', data, setgraph);
     }
     else {
@@ -443,6 +445,14 @@ function toggle_flangelet_list() {
     return _f;
 }
 
+function toggle_config_list() {
+    let show = toggle($("#config-list"));
+    function _f(btn) {
+	show(btn);
+    }
+    return _f;
+}
+
 function toggle(target, others) {
     let _f = (btn) => {
 	if (btn.state()) target.fadeIn(200);
@@ -458,6 +468,7 @@ function init() {
     $.get('f', setgraph);
 
     var show_sketches = Button.build(["Sketches", "Sketches"], $("#menu"), toggle_flangelet_list(), "", true);
+    var show_config = Button.build(["Compiler Options", "Compiler Options"], $("#menu"), toggle_config_list(), "", true);
     
     var submit_btn = Button.build(["Submit"], $("#cnt-code"), postFlange, ["emph"]);
     var netpath_btn = Button.build(["Show Netpath", "Hide Netpath"], $("#sidebar"), toggle($("#divNetpath")));

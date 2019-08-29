@@ -1,23 +1,24 @@
 from flange.exceptions import ResolutionError
-from flange.primitives.internal import Path
+from flange.primitives.internal import Path, Solution
 
-def filter_user(path, env):
+def filter_user(solution, env):
     def _is_valid(e):
         try:
             return env['usr'] == '*' or env['usr'] in e.users
         except AttributeError:
             return True
 
-    for e in path:
+    interest = []
+    for e in solution.paths:
         if e[0] == 'node' and _is_valid(e[1]):
             continue
         elif e[0] == 'flow' and all([_is_valid(e) for _,e in e[1:]]):
             continue
         raise ResolutionError
-    return path
+    return solution, []
 
-def xsp_tag_user(path, env):
-    def _flow(e, src, dst):
+def xsp_tag_user(solution, env):
+    def _flow(e, src, dst, interest):
         res, tag = [], False
         for i, (ty, s) in enumerate(e):
             if not tag:
@@ -31,6 +32,7 @@ def xsp_tag_user(path, env):
                                            'field': 'ip_dscp',
                                            'value': 16}}
                         ]}
+                    interest.append(s)
                     if rule not in s.rules:
                         s.rules.append(rule)
             res.append(s)
@@ -39,15 +41,15 @@ def xsp_tag_user(path, env):
         return res
     
     if env['usr'] in ['*', 'admin']:
-        return path
+        return solution
 
-    result = []
-    for e in path:
+    result, interest = [], []
+    for e in solution.paths:
         if e[0] == 'flow':
             assert e[2][0] == 'port' and e[-2][0] == 'port'
             src, dst = e[2][1].address.address, e[-2][1].address.address
-            result.append(_flow(e[1:], src, dst))
+            result.append(_flow(e[1:], src, dst, interest))
         else:
             result.append(e)
-        
-    return result
+
+    return Solution(result, solution.env), interest

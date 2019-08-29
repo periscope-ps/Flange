@@ -22,12 +22,12 @@ def create_path(path):
     return json.dumps(result)
 
 @trace.info("netpath")
-def run(changes, env):
+def run(solutions, env):
     result = []
-    for delta in changes:
-        for element in delta:
-            if element[0] == "node":
-                result.append(create_node(element[1]))
-            elif element[0] == "flow":
-                result.append(create_path(element[1:]))
+    for solution in solutions:
+        for path in solution.paths:
+            if path[0] == "node":
+                result.append(create_node(path[1]))
+            elif path[0] == "flow":
+                result.append(create_path(path[1:]))
     return result

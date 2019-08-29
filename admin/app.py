@@ -87,10 +87,12 @@ class FlangeHandler(tornado.web.RequestHandler):
 
         program = self.get_argument("program", None)
         tys = self.get_argument("type", "svg").split(",")
+        mods = list(filter(lambda x: x, self.get_argument("mods", "").split(",")))
+        print(tys, mods)
         if not program:
             self.send_error(500)
         else:
-            payload = { "program": program, "flags": { "type":  tys } }
+            payload = { "program": program, "flags": { "type":  tys, "mods": mods } }
             r = requests.post(self.href + "/c",
                               data=json.dumps(payload),
                               headers=headers)

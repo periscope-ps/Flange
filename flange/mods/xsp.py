@@ -1,9 +1,9 @@
 from flange.exceptions import ResolutionError
-from flange.primitives.internal import Path
+from flange.primitives.internal import Path, Solution
 
 import logging
 
-def xsp_forward(paths, env):
+def xsp_forward(solution, env):
     key_map = {
         "l4_src": "src_port",
         "l4_dst": "dst_port",
@@ -16,7 +16,7 @@ def xsp_forward(paths, env):
                getattr(r, 'ip_src', None) == src and getattr(r, 'ip_dst', None) == dst:
                     yield i
     
-    def _insert_rules(e, src, dst, props, annotations):
+    def _insert_rules(e, src, dst, props, annotations, interest):
         result = []
         for i, (ty, s) in enumerate(e):
             if ty == 'port' and len(e) > i+2:
@@ -25,6 +25,7 @@ def xsp_forward(paths, env):
                 if not index:
                     logging.getLogger('flange.OF').warn("No compatible index on OF port")
                 elif e[i+1][0] in ['node', 'function']:
+                    interest.append(s)
                     matches = list(sorted(_find_rules(s.rules, src, dst, **props), key=lambda x: getattr(s.rules[x], 'priority', 0)))
                     if matches:
                         match = False
@@ -55,48 +56,85 @@ def xsp_forward(paths, env):
         result.annotations = annotations
         return result
     
-    result = set([])
-    for e in paths:
-        if e[0] == 'flow':
-            assert e[2][0] == 'port' and e[-2][0] == 'port'
-            src, dst = e[2][1].address.address, e[-2][1].address.address
-            flow = _insert_rules(e[1:], src, dst, e.properties, e.annotations)
-            result.add(flow)
+    result, interest = [], []
+    for path in solution.paths:
+        if path[0] == 'flow':
+            assert path[2][0] == 'port' and path[-2][0] == 'port'
+            src, dst = path[2][1].address.address, path[-2][1].address.address
+            flow = _insert_rules(e[1:], src, dst, e.properties, e.annotations, interest)
+            result.append(flow)
         else:
-            result.add(e)
-    return result
+            result.append(e)
+    return Solution(result, solution.env), interest
 
-def xsp_function(paths, env):
-    result = set([])
+def xsp_function(solution, env):
+    result, interest = [], []
+    cmp = {
+        'gt': lambda a,b: a > b, 'ge': lambda a,b: a >= b,
+        'lt': lambda a,b: a < b, 'le': lambda a,b: a <= b,
+        'ne': lambda a,b: a != b
+    }
+    def _set_conf(f, conf):
+        changed = False
+        for k in conf.keys():
+            for c,v in conf[k].items():
+                if c == 'eq':
+                    if getattr(f.configuration, k, float('-inf')) != v:
+                        changed = True
+                        setattr(f.configuration, k, v)
+                elif not hasattr(f.configuration, k):
+                    raise ResolutionError("Unknown function config '{}.{}'".format(f.name, k))
+                elif not cmp[c](getattr(f.configuration, k), v):
+                    raise ResolutionError("Invalid function config '{}.{}' {} '{}'".format(f.name, k, c, v))
+        return changed
     def _add_function(e, fns, neg):
-        if e[0] == 'node' and fns:
+        if e[0] == 'node':
+            if fns: interest.append(e[1])
             for fn in fns:
-                if all([not r.function.name == fn.name for r in e[1].rules if hasattr(r, 'function')]):
-                    if not hasattr(e[1], 'functions'):
-                        e[1].extendSchema('functions', {})
-                        e[1].functions = { "create": [], "delete": [], "active": [] }
-                    s = e[1].functions
-                    if neg:
-                        if any([f.name == fn.name for f in s.create]):
-                            raise ResolutionError("Function '{}' in transient state on '{}'".format(fn.name, e[1].name))
-                        if any([f.name == fn.name for f in s.active]) and \
-                           all([f.name != fn.name for f in s.delete]):
-                            s.delete.append({'name': fn.name})
+                conf = {}
+                static_conf = solution.env.get(fn, {})
+                for k in static_conf.keys():
+                    for c,v in static_conf[k].items():
+                        if c == 'eq': conf[k] = v
+                if not hasattr(e[1], 'functions'):
+                    e[1].extendSchema('functions', {})
+                    e[1].functions = { "create": [], "delete": [], "active": [], "modified": [] }
+                s = e[1].functions
+                
+                if neg:
+                    if any([f.name == fn.name for f in s.create]):
+                        raise ResolutionError("Function '{}' in transient state on '{}'".format(fn.name, e[1].name))
+                    if any([f.name == fn.name for f in s.active]):
+                        if all([f.name != fn.name for f in s.delete]):
+                            s.delete.append({'name': fn.name, 'configuration': conf})
+                        else:
+                            for f in s.delete:
+                                if f.name == fn.name: _set_conf(f, static_conf)
+                else:
+                    if any([f.name == fn.name for f in s.delete]):
+                        raise ResolutionError("Function '{}' in transient state on '{}'".format(fn.name, e[1].name))
+                    if all([f.name != fn.name for f in s.active]):
+                        exists = False
+                        for f in s.create:
+                            if f.name == fn.name:
+                                _set_conf(f, static_conf)
+                                exists = True
+                        if not exists:
+                            s.create.append({'name': fn.name, 'configuration': conf})
                     else:
-                        if any([f.name == fn.name for f in s.delete]):
-                            raise ResolutionError("Function '{}' in transient state on '{}'".format(fn.name, e[1].name))
-                        if all([f.name != fn.name for f in list(s.active) + list(s.create)]):
-                            s.create.append({'name': fn.name})
+                        for f in s.active:
+                            if f.name == fn.name and _set_conf(f, static_conf):
+                                s.modified.append(f)
         return e[1]
-    for e in paths:
-        if e[0] == 'flow':
-            assert e[2][0] == 'port' and e[-2][0] == 'port'
+    for path in solution.paths:
+        if path[0] == 'flow':
+            assert path[2][0] == 'port' and path[-2][0] == 'port'
             flow = []
-            for i,x in enumerate(e[1:]):
-                flow.append(_add_function(x, e.annotations[i+1], e.negation))
-            flow = Path(flow, e.properties, negation=e.negation)
-            flow.annotations = e.annotations
-            result.add(flow)
+            for i,x in enumerate(path[1:]):
+                flow.append(_add_function(x, path.annotations[i+1], path.negation))
+            flow = Path(flow, path.properties, negation=path.negation)
+            flow.annotations = path.annotations
+            result.append(flow)
         else:
-            result.add(e)
-    return result
+            result.append(path)
+    return Solution(result, solution.env), interest

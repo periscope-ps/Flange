@@ -9,6 +9,7 @@ from unis.services.graph import UnisGrapher
 from unis.services.graphbuilder import Graph
 
 from flanged import handlers
+from flanged import engine
 
 # TMP Mock database object
 class _Database(object):
@@ -43,6 +44,12 @@ class _Database(object):
             self._store[usr] = []
         self._store[usr].append(flangelet)
 
+    def remove(self, usr, flangelet):
+        if usr not in self._store:
+            return False
+        self._store[usr].remove(flangelet)
+        return True
+
 def _build_graph(rt, size, push):
     rt.nodes.createIndex('name')
     g = Graph.power_graph(size, 1, db=rt)
@@ -54,6 +61,9 @@ def _get_app(unis, layout, size=None, push=False, controller=None):
     db = _Database()
     rt = Runtime(unis, proxy={'defer_update': True})
     rt.addService(UnisGrapher)
+    rt.addService(engine.Service(db))
+    engine.run(db, rt)
+    
     if size:
         _build_graph(rt, size, push)
     else:
@@ -84,7 +94,6 @@ def _get_app(unis, layout, size=None, push=False, controller=None):
     app.add_route('/l/{usr}', sketches)
     app.add_route('/q/{fid}', query)
     app.add_route('/p/{fid}', push)
-    #app.add_route('/s', subscribe)
     
     return app
 
@@ -161,7 +170,6 @@ def main():
         stdout.setFormatter(logging.Formatter("{color}[{levelname} {asctime} {name}]{reset} {message}", style="{"))
         log.setLevel(levels[min(conf['debug'], 5)])
         log.addHandler(stdout)
-        print(log)
 
     log.info("Configuration:")
     for k,v in conf.items():

@@ -67,3 +67,11 @@ class PushFlowHandler(_BaseHandler):
 
         runner = Thread(target=self._track_flangelet, name="live_flangelet_{}".format(self.tracking), args=(ir,), daemon=True)
         runner.start()
+
+    @falcon.before(_BaseHandler.do_auth)
+    def on_delete(self, req, resp, fid):
+        self.tracking -= 1
+        if not self._db.remove(self._usr, self._db.find(fid, self._usr)):
+            resp.status = falcon.HTTP_404
+        else:
+            resp.status = falcon.HTTP_200

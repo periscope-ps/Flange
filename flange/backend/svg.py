@@ -24,9 +24,9 @@ def run(changes, env):
     
     if not utils.runtime().graph.processing_level:
         utils.runtime().graph.spring(25, 50)
-
-    for delta in changes:
-        for element in delta:
+        
+    for solution in changes:
+        for element in solution.paths:
             if element[0] == "node":
                 if hasattr(element[1], "virtual") and element[1].virtual:
                     for n in element[1]._members:

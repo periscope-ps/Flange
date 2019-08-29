@@ -50,7 +50,7 @@ circle.sink {
 }
 
 #menu .button {
-    margin-left: 20px;
+    margin-left: 10px;
     border-radius: 2px;
     color: black;
     background-color: rgb(200,200,200);
@@ -161,7 +161,7 @@ label.button {
     display: none;
 }
 
-#flangelet-list {
+#config-list, #flangelet-list {
     display: none;
     height: 175px;
     padding: 5px 0px;
@@ -224,6 +224,19 @@ label.button {
     margin-left: 10px;
     border-radius: 10px;
     background-color: red;
+}
+
+#config-list div {
+    padding: 5px 10px;
+}
+
+#config-list label {
+    display: inline-block;
+    width: 70px;
+}
+
+#config-list input {
+    width: 400px;
 }
 
 #divLive {
