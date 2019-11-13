@@ -41,7 +41,7 @@ def physical(dpid):
     sw = OFSwitch({'name': 'sw_v1', 'dpid': dpid, 'ports': [p1, p2, p3, p4]})
 
     # Layer3
-    p3_1, p3_2, p3_3, p3_4 = [Port() for _ in range(3)]
+    p3_1, p3_2, p3_3, p3_4 = [Port() for _ in range(4)]
     l_c_r = Link({'directed': False, 'endpoints': [p3_1, p3_2]})
     l_s_r = Link({'directed': False, 'endpoints': [p3_3, p3_4]})
     client.ports.append(p3_1)
@@ -56,7 +56,7 @@ if __name__ == '__main__':
     parser.add_argument('--logical', action='store_true')
     parser.add_argument('dpid', metavar='N', type=str)
     args = parser.parse_args()
-    rt = Runtime('http://localhost:8888', cache={'preload': ['nodes', 'ports', 'links']})
+    rt = Runtime('http://localhost:30100', cache={'preload': ['nodes', 'ports', 'links']})
     
     for n in rt.nodes:
         rt.nodes.remove(n)
