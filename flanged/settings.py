@@ -10,3 +10,14 @@ MIME = {
     'PSBSON': 'application/perfsonar+bson',
     'PSXML': 'application/perfsonar+xml',
 }
+
+DEFAULT_CONFIG = {
+    'unis': None,
+    'port': 8000,
+    'debug': 1,
+    'size': 0,
+    'push': False,
+    'layout': '',
+    'ryu_controller': '',
+    'community': ''
+}

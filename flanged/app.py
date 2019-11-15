@@ -1,15 +1,13 @@
-import argparse
-import falcon
-import json
-import lace, logging
+import argparse, copy, falcon, json, lace, logging
+import unis as unislib
 from configparser import ConfigParser
 from collections import defaultdict
-from unis import Runtime
 from unis.services.graph import UnisGrapher
 from unis.services.graphbuilder import Graph
 
 from flanged import handlers
 from flanged import engine
+from flanged.settings import DEFAULT_CONFIG
 
 # TMP Mock database object
 class _Database(object):
@@ -56,10 +54,16 @@ def _build_graph(rt, size, push):
     if push:
         g.finalize()
 
-def _get_app(unis, layout, size=None, push=False, controller=None):
-    conf = { "auth": True, "secret": "a4534asdfsberwregoifgjh948u12", "controller": controller }
+def _get_app(unis, layout, size=None, push=False, controller=None, community=None):
+    log = logging.getLogger('flanged')
+    conf = { "auth": True, "secret": "a4534asdfsberwregoifgjh948u12", "controller": controller, 'community': community }
     db = _Database()
-    rt = Runtime(unis, proxy={'defer_update': True})
+    if not unis:
+        if not community:
+            log.error("Invalid configuration: needs at least one UNIS instance or a community")
+        rt = unislib.from_community(community)
+    else:
+        rt = unislib.Runtime(unis, proxy={'defer_update': True})
     rt.addService(UnisGrapher)
     rt.addService(engine.Service(db))
     engine.run(db, rt)
@@ -99,7 +103,7 @@ def _get_app(unis, layout, size=None, push=False, controller=None):
 
 def _read_config(file_path):
     if not file_path:
-        return {}
+        return copy.copy(DEFAULT_CONFIG)
     parser = ConfigParser(allow_no_value=True)
     
     try:
@@ -110,14 +114,12 @@ def _read_config(file_path):
 
     config = parser['CONFIG']
     try:
-        result = {'unis': json.loads(str(config['unis'])),
-                  'debug': int(config['debug']),
-                  'port': int(config['port']),
-                  'layout': config['layout'],
-                  'ryu_controller': config['ryu-controller']}
-        
-        return result
-
+        return {'unis': json.loads(str(config.get('unis', DEFAULT_CONFIG['unis']))),
+                'debug': int(config.get('debug', DEFAULT_CONFIG['debug'])),
+                'port': int(config.get('port', DEFAULT_CONFIG['port'])),
+                'layout': config.get('layout', DEFAULT_CONFIG['layout']),
+                'ryu_controller': config.get('ryu-controller', DEFAULT_CONFIG['ryu-controller']),
+                'community': config.get('community', DEFAULT_CONFIG['community'])}
     except Exception as e:
         print(e)
         raise AttributeError('Error in config file, please ensure file is '
@@ -142,6 +144,8 @@ def main():
                         'topology')
     parser.add_argument('-r', '--ryu-controller', type=str, help='Set the url'
                         ' to the ryu controller used to configure the network')
+    parser.add_argument('-C', '--community', type=str, help='Set the community '
+                        'name for the network community.')
     parser.add_argument('-c', '--config', type=str, help='Start flanged using '
                         'paremeters defined from a conf file. ex) flanged -c '
                         '/your/path/to/file.ini')
@@ -155,27 +159,27 @@ def main():
         log.info("Listening on port {}".format(port))
         server.serve_forever()
 
-    conf = {'unis': None, 'port': 8000, 'debug': 1, 'size': 0, 'push': False,
-            'layout': '', 'ryu_controller': ''}
-    conf.update(**_read_config(args.config))
+    conf = _read_config(args.config)
     conf.update(**{k:v for k,v in args.__dict__.items() if v is not None})
+    print(conf)
     if isinstance(conf['unis'], str):
         conf['unis'] = [str(u) for u in conf['unis'].split(',')]
 
-    log = logging.getLogger('flanged')
+    log = logging.getLogger('flange.flanged')
     if conf['debug']:
         levels = [lace.logging.NOTSET, lace.logging.INFO, lace.logging.DEBUG, lace.logging.TRACE_OBJECTS,
                   lace.logging.TRACE_PUBLIC, lace.logging.TRACE_ALL]
-        stdout = logging.StreamHandler()
-        stdout.setFormatter(logging.Formatter("{color}[{levelname} {asctime} {name}]{reset} {message}", style="{"))
+        logging.basicConfig(format='%(color)s[%(asctime)-15s] [%(levelname)s] %(name)s%(reset)s %(message)s')
+        #stdout = logging.StreamHandler()
+        #stdout.setFormatter(logging.Formatter("{color}[{levelname} {asctime} {name}]{reset} {message}", style="{"))
         log.setLevel(levels[min(conf['debug'], 5)])
-        log.addHandler(stdout)
+        #log.addHandler(stdout)
 
     log.info("Configuration:")
     for k,v in conf.items():
-        log.info("{:>12}: {}".format(k, v))
-    log.info("Reading topology from {}...".format(conf['unis']))
-    app = _get_app(conf['unis'], conf['layout'], conf['size'], conf['push'], conf['ryu_controller'])
+        log.info("{:>14}: {}".format(k, v))
+    log.info("Reading topology from {}...".format(conf['unis'] or conf['community']))
+    app = _get_app(conf['unis'], conf['layout'], conf['size'], conf['push'], conf['ryu_controller'], conf['community'])
     serve(conf['port'], app)
 
 if __name__ == "__main__":
