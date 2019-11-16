@@ -119,7 +119,8 @@ def _read_config(file_path):
                 'port': int(config.get('port', DEFAULT_CONFIG['port'])),
                 'layout': config.get('layout', DEFAULT_CONFIG['layout']),
                 'ryu_controller': config.get('ryu-controller', DEFAULT_CONFIG['ryu_controller']),
-                'community': config.get('community', DEFAULT_CONFIG['community'])}
+                'community': config.get('community', DEFAULT_CONFIG['community']),
+                'size': config.get('size', DEFAULT_CONFIG['size'])}
     except Exception as e:
         print(e)
         raise AttributeError('Error in config file, please ensure file is '
