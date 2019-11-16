@@ -118,7 +118,7 @@ def _read_config(file_path):
                 'debug': int(config.get('debug', DEFAULT_CONFIG['debug'])),
                 'port': int(config.get('port', DEFAULT_CONFIG['port'])),
                 'layout': config.get('layout', DEFAULT_CONFIG['layout']),
-                'ryu_controller': config.get('ryu-controller', DEFAULT_CONFIG['ryu-controller']),
+                'ryu_controller': config.get('ryu-controller', DEFAULT_CONFIG['ryu_controller']),
                 'community': config.get('community', DEFAULT_CONFIG['community'])}
     except Exception as e:
         print(e)
