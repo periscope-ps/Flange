@@ -28,7 +28,7 @@ class Flow(assertion):
         def accept(self, path):
             for l in filter(lambda x: isinstance(x, Link), path):
                 self.weights[l] += 1
-            
+
         def getpath(self, source):
             loops, ccount, fringe, lfringe, rnt = 0, 1, [[source]], [], defaultdict(list)
             visits = defaultdict(lambda: 0)
@@ -93,6 +93,7 @@ class Flow(assertion):
             try:
                 i, p, subpaths = 0, path, []
                 for rule in self._hops:
+                    if not rule.filter(p): break
                     subpath, p = p.pathsplit(rule)
                     i += len(subpath) - 1
                     path.origins[i] = rule.sink

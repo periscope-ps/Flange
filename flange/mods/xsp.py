@@ -15,14 +15,15 @@ def xsp_forward(solution, env):
             if all([getattr(r, key_map[k], None) == v.value for k,v in kwargs.items()]) and \
                getattr(r, 'ip_src', None) == src and getattr(r, 'ip_dst', None) == dst:
                     yield i
-    
+
     def _insert_rules(e, src, dst, props, annotations, interest):
         result = []
         for i, (ty, s) in enumerate(e):
             if ty == 'port' and len(e) > i+2:
+                index = None
                 try: index = e[i+2][1].properties.vport_number
                 except AttributeError: index = e[i+2][1].index
-                if not index:
+                if index is None:
                     logging.getLogger('flange.OF').warn("No compatible index on OF port")
                 elif e[i+1][0] in ['node', 'function']:
                     interest.append(s)
@@ -61,10 +62,10 @@ def xsp_forward(solution, env):
         if path[0] == 'flow':
             assert path[2][0] == 'port' and path[-2][0] == 'port'
             src, dst = path[2][1].address.address, path[-2][1].address.address
-            flow = _insert_rules(e[1:], src, dst, e.properties, e.annotations, interest)
+            flow = _insert_rules(path[1:], src, dst, path.properties, path.annotations, interest)
             result.append(flow)
         else:
-            result.append(e)
+            result.append(path)
     return Solution(result, solution.env), interest
 
 def xsp_function(solution, env):

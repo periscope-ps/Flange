@@ -5,7 +5,7 @@ from unis.models import Flow
 
 from flange import compiler
 from flange.mods.user import filter_user, xsp_tag_user
-from flange.mods.xsp import xsp_forward
+from flange.mods.openflow import openflow_mod
 from flange.utils import reset_rules, runtime
 
 from flanged.handlers.base import _BaseHandler
@@ -21,7 +21,7 @@ class CompileHandler(_BaseHandler):
     @falcon.after(_BaseHandler.encode_response)
     @get_body
     def on_post(self, req, resp, body):
-        reset_rules.reset(self.rt)
+        #reset_rules.reset(self.rt)
         if "program" not in body:
             raise falcon.HTTPInvalidParam("Compilation request requires a program field", "program")
         flags = body.get("flags", {})
@@ -38,12 +38,15 @@ class CompileHandler(_BaseHandler):
 
         self._db.insert(self._usr, ir)
 
-        delta = {}
+        delta, do_ryu = {}, False
         if 'netpath' not in tys: delta['netpath'] = {}
+        if 'ryu' in tys:
+            do_ryu = True
+            tys.remove('ryu')
         for ty in tys:
             delta[ty] = getattr(ir, ty)
         delta['fid'] = ir.fid
-        if 'ryu' in tys:
+        if do_ryu:
             try:
                 delta['ryu'] = build_ryu_json(json.loads(delta['netpath'][0]))
             except Exception as e:
@@ -54,13 +57,13 @@ class CompileHandler(_BaseHandler):
         self.rt.flush()
         resp.body = delta
         resp.status = falcon.HTTP_200
-        
+
     def authorize(self, attrs):
         return True if "x" in attrs else False
         
     def compute(self, prog, ty="netpath", mods=None):
         try:
-            env = {'usr': self._usr, 'mods': mods or [xsp_forward]}
+            env = {'usr': self._usr, 'mods': mods or [openflow_mod]}
             result = compiler.compile_pcode(prog, 1, env=env)
             
         except Exception as exp:

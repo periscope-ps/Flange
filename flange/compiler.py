@@ -97,6 +97,7 @@ def get_mods(ls):
 def compile_pcode(program, loglevel=None, interactive=False, firstn=len(passes), breakpoint=None, env=None):
     raw = program
     env['mods'] = get_mods(env['mods'])
+    env.setdefault('logging', loglevel)
     print("Compiling on Env: {}\n".format(env))
     if breakpoint:
         trace.setBreakpoint(breakpoint)

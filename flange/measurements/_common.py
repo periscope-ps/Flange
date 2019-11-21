@@ -43,7 +43,7 @@ class _flange_prop(fl_object):
     def __eq__(self, other):
         self._value = other
         return True
-        
+
 def PropertyBuilder(name):
     def func(path):
         prop = _flange_prop(name)

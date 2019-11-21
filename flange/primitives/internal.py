@@ -20,7 +20,9 @@ class Path(object):
             "latency_ms": measure.Builder("histogram-owdelay", sum, 0),
             "l4_src": measure.PropertyBuilder("l4_src"),
             "l4_dst": measure.PropertyBuilder("l4_dst"),
-            "ip_proto": measure.PropertyBuilder("ip_proto")
+            "ip_proto": measure.PropertyBuilder("ip_proto"),
+            "vlan": measure.PropertyBuilder("ip_proto"),
+            "queue": measure.PropertyBuilder("queue")
         }
         self.negation = negation
         self.properties = properties or defaultdict(lambda: _flange_prop("<no_prop>"))
@@ -33,7 +35,7 @@ class Path(object):
             return self._path_attrs[n](self)
         else:
             return super().__getattribute__(n)
-            
+
     def _get_type(self, e):
         tys = {
             Link: "link",
@@ -58,7 +60,6 @@ class Path(object):
                 return Path(self.hops[:i+1], self.properties), Path(self.hops[i:], self.properties)
         raise PathError()
 
-    
     def __len__(self):
         return len(self.hops) + 1
 

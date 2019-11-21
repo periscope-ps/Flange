@@ -1,8 +1,11 @@
+import logging
+
 from flange.primitives.resolvable import _resolvable
 from flange.exceptions import CompilerError,ResolutionError
 
 def run(program, env):
     results, interest = [], []
+    log = logging.getLogger('flange.buildchanges')
     for op in program:
         result = None
         if not isinstance(op, _resolvable):

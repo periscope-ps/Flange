@@ -15,7 +15,7 @@ class PushFlowHandler(_BaseHandler):
         self.rt = runtime(rt)
         super().__init__(conf, db)
 
-    def _push_to_ryu(self, mods):
+    def _push_to_controller(self, mods):
         if (mods['add'] or mods['modify']) and self._conf['controller']:
             print()
             print("New Flow Rules: {}".format(self._conf['controller']))
@@ -27,7 +27,6 @@ class PushFlowHandler(_BaseHandler):
                     print(r.status_code)
                 except ConnectionError as exp:
                     print(exp)
-                    pass
             print("  Modifying Flows:")
             for modify in mods['modify']:
                 try:
@@ -37,9 +36,8 @@ class PushFlowHandler(_BaseHandler):
                 except ConnectionError:
                     pass
             print()
-    
+
     def _track_flangelet(self, ir):
-        print(self._conf)
         while True:
             ir.reset()
             mods = build_ryu_json(json.loads(ir.netpath[0]))
@@ -47,7 +45,7 @@ class PushFlowHandler(_BaseHandler):
                 clean_rules(self.rt)
             except Exception as exp:
                 print(exp)
-            self._push_to_ryu(mods)
+            self._push_to_controller(mods)
             time.sleep(1)
             
     

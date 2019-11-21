@@ -12,9 +12,6 @@ def build_rule(hop, env):
         if n != query[1] and n not in env.keys():
             raise CompilerError("Unknown symbol - {}".format(n))
         return p if n == query[1] else env[n]
-        if n != hop[1][1]:
-            raise CompilerError("Flow Query may only reference query variable")
-        return p
     
     def _query(inst):
         ops = {
