@@ -4,7 +4,6 @@ from unis.models import Node
 
 from lace.logging import trace
 
-
 class FlangeError(Exception):
     pass
 

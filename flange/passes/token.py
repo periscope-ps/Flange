@@ -10,16 +10,16 @@ Takes a single string program and returns the list of tokens.
 Token is implemented as a state machine and generates token based 
 on a ``stack`` storing the current working token.  Each transition
 contains a next state and stack actions, which may be any combination
-of ``"push"`` and ``"yield"``.
+of ``PUSH`` and ``YIELD``.
 
 +-------+-----------------------------------------------------+
-| push  | Add the read character to the working stack         |
+| PUSH  | Add the read character to the working stack         |
 +-------+-----------------------------------------------------+
-| yield | Add the current working stack to the list of tokens |
+| YIELD | Add the current working stack to the list of tokens |
 +-------+-----------------------------------------------------+
 
 :class:`Tokens <flange.tools.token.Token>` are generated on each 
-``"yield"`` instruction and store line and character information
+``YIELD`` instruction and store line and character information
 for debugging.
 
 This pass raises an error if the EOF is reached while still in 
@@ -49,55 +49,56 @@ yields
 
 """
 
-def_trans = {"base": ["base", ["push"]],
-             "combine": ["base", ["yield", "push"]],
-             "num": ["base", ["yield", "push"]],
-             "single_string": ["single_string", ["push"]],
-             "double_string": ["double_string", ["push"]],
-             "single_escape": ["single_string", ["push"]],
-             "double_escape": ["double_string", ["push"]]}
-trans = {"base": ["base", ["yield", "push", "yield"]],
-         "combine": ["base", ["yield", "push", "yield"]],
-         "num": ["base", ["yield", "push", "yield"]],
-         "single_string": ["single_string", ["push"]],
-         "double_string": ["double_string", ["push"]],
-         "single_escape": ["single_string", ["push"]],
-         "double_escape": ["double_string", ["push"]]}
-c_trans = {"base": ["combine", ["yield", "push"]],
-           "combine": ["combine", ["push"]],
-           "num": ["combine", ["yield", "push"]],
-           "single_string": ["single_string", ["push"]],
-           "double_string": ["double_string", ["push"]],
-           "single_escape": ["single_string", ["push"]],
-           "double_escape": ["double_string", ["push"]]}
-n_trans = {"base": ["num", ["yield", "push"]],
-           "combine": ["num", ["yield", "push"]],
-           "num": ["num", ["push"]],
-           "single_string": ["single_string", ["push"]],
-           "double_string": ["double_string", ["push"]],
-           "single_escape": ["single_string", ["push"]],
-           "double_escape": ["double_string", ["push"]]}
-ss_trans = {"base": ["single_string", ["yield", "push", "yield"]],
-            "combine": ["single_string", ["yield", "push", "yield"]],
-            "num": ["single_string", ["yield", "push", "yield"]],
-            "single_string": ["base", ["yield", "push", "yield"]],
-            "double_string": ["double_string", ["push"]],
-            "single_escape": ["single_string", ["push"]],
-            "double_escape": ["double_string", ["push"]]}
-ds_trans = {"base": ["double_string", ["yield", "push", "yield"]],
-            "combine": ["double_string", ["push", "yield"]],
-            "num": ["double_string", ["yield", "push", "yield"]],
-            "single_string": ["single_string", ["push"]],
-            "double_string": ["base", ["yield", "push", "yield"]],
-            "single_escape": ["single_string", ["push"]],
-            "double_escape": ["double_string", ["push"]]}
-e_trans = {"base": ["base", ["yield", "push", "yield"]],
-           "combine": ["base", ["yield", "push", "yield"]],
-           "num": ["base", ["yield", "push", "yield"]],
-           "single_string": ["single_escape", ["push"]],
-           "double_string": ["double_escape", ["push"]],
-           "single_escape": ["single_string", ["push"]],
-           "double_escape": ["double_string", ["push"]]}
+PUSH,YIELD = 0,1
+def_trans = {"base": ["base", [PUSH]],
+             "combine": ["base", [YIELD, PUSH]],
+             "num": ["base", [YIELD, PUSH]],
+             "single_string": ["single_string", [PUSH]],
+             "double_string": ["double_string", [PUSH]],
+             "single_escape": ["single_string", [PUSH]],
+             "double_escape": ["double_string", [PUSH]]}
+trans = {"base": ["base", [YIELD, PUSH, YIELD]],
+         "combine": ["base", [YIELD, PUSH, YIELD]],
+         "num": ["base", [YIELD, PUSH, YIELD]],
+         "single_string": ["single_string", [PUSH]],
+         "double_string": ["double_string", [PUSH]],
+         "single_escape": ["single_string", [PUSH]],
+         "double_escape": ["double_string", [PUSH]]}
+c_trans = {"base": ["combine", [YIELD, PUSH]],
+           "combine": ["combine", [PUSH]],
+           "num": ["combine", [YIELD, PUSH]],
+           "single_string": ["single_string", [PUSH]],
+           "double_string": ["double_string", [PUSH]],
+           "single_escape": ["single_string", [PUSH]],
+           "double_escape": ["double_string", [PUSH]]}
+n_trans = {"base": ["num", [YIELD, PUSH]],
+           "combine": ["num", [YIELD, PUSH]],
+           "num": ["num", [PUSH]],
+           "single_string": ["single_string", [PUSH]],
+           "double_string": ["double_string", [PUSH]],
+           "single_escape": ["single_string", [PUSH]],
+           "double_escape": ["double_string", [PUSH]]}
+ss_trans = {"base": ["single_string", [YIELD, PUSH, YIELD]],
+            "combine": ["single_string", [YIELD, PUSH, YIELD]],
+            "num": ["single_string", [YIELD, PUSH, YIELD]],
+            "single_string": ["base", [YIELD, PUSH, YIELD]],
+            "double_string": ["double_string", [PUSH]],
+            "single_escape": ["single_string", [PUSH]],
+            "double_escape": ["double_string", [PUSH]]}
+ds_trans = {"base": ["double_string", [YIELD, PUSH, YIELD]],
+            "combine": ["double_string", [PUSH, YIELD]],
+            "num": ["double_string", [YIELD, PUSH, YIELD]],
+            "single_string": ["single_string", [PUSH]],
+            "double_string": ["base", [YIELD, PUSH, YIELD]],
+            "single_escape": ["single_string", [PUSH]],
+            "double_escape": ["double_string", [PUSH]]}
+e_trans = {"base": ["base", [YIELD, PUSH, YIELD]],
+           "combine": ["base", [YIELD, PUSH, YIELD]],
+           "num": ["base", [YIELD, PUSH, YIELD]],
+           "single_string": ["single_escape", [PUSH]],
+           "double_string": ["double_escape", [PUSH]],
+           "single_escape": ["single_string", [PUSH]],
+           "double_escape": ["double_string", [PUSH]]}
 states = {
     " ": trans, "\n": trans, "\t": trans,
     "(": trans, ")": trans,
@@ -116,10 +117,10 @@ def _build_tokens(program):
         for j, c in enumerate(line):
             state, actions = states.get(c, def_trans)[state]
             for a in actions:
-                if a == "yield" and stack:
+                if a == YIELD and stack:
                     yield Token(stack, ln, i)
                     i, stack = None, ""
-                elif a == "push":
+                elif a == PUSH:
                     if isinstance(i, type(None)):
                         i = j
                     stack += c
