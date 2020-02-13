@@ -8,7 +8,7 @@ from functools import reduce
 from lace.logging import trace
 from unis.models import Link
 
-LOOPCOUNT = 1
+LOOPCOUNT = 3
 
 class assertion(_resolvable): pass
 
@@ -62,7 +62,7 @@ class Flow(assertion):
         src, snk = self._src._members, self._snk._members
         result, loops = [], 0
         fringe,lfringe = [[x] for x in src], []
-       
+
         while loops < LOOPCOUNT and (fringe or lfringe):
             if not fringe:
                 fringe, lfringe, loops = lfringe, [], loops + 1
