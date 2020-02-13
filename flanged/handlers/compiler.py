@@ -9,7 +9,7 @@ from flange.mods.openflow import openflow_mod
 from flange.utils import reset_rules, runtime
 
 from flanged.handlers.base import _BaseHandler
-from flanged.handlers.utils import get_body, build_ryu_json, clean_rules
+from flanged.handlers.utils import get_body, build_ryu_json
 
 class CompileHandler(_BaseHandler):
     def __init__(self, conf, db, rt):
@@ -38,7 +38,7 @@ class CompileHandler(_BaseHandler):
 
         self._db.insert(self._usr, ir)
 
-        delta, do_ryu = {}, False
+        delta, do_ryu = {'ryu': {'add': [], 'modify': []}}, False
         if 'netpath' not in tys: delta['netpath'] = {}
         if 'ryu' in tys:
             do_ryu = True
@@ -47,11 +47,13 @@ class CompileHandler(_BaseHandler):
             delta[ty] = getattr(ir, ty)
         delta['fid'] = ir.fid
         if do_ryu:
-            try:
-                delta['ryu'] = build_ryu_json(json.loads(delta['netpath'][0]))
-            except Exception as e:
-                self._log.error("Graph missing critical attributes for generating 'netpath' - {}".format(e))
-                delta['ryu'] = {}
+            for path in delta['netpath']:
+                try:
+                    v = build_ryu_json(json.loads(path))
+                    delta['ryu']['add'].extend(v['add'])
+                    delta['ryu']['modify'].extend(v['modify'])
+                except Exception as e:
+                    self._log.error("Graph missing critical attributes for generating 'netpath' - {}".format(e))
         else: delta['ryu'] = {}
 
         self.rt.flush()

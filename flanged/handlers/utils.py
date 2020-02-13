@@ -25,6 +25,7 @@ _of_keymap = {
 }
 
 def build_ryu_json(npath):
+    print(npath)
     def _build_record(dpid, r):
         record = {
             'dpid': int(dpid),
@@ -43,7 +44,7 @@ def build_ryu_json(npath):
 
     requests = {"add": [], "modify": []}
     for ele in npath['hops']:
-        ele.setdefault('datapathid', 0) # Temporary for testing
+        #ele.setdefault('datapathid', 0) # Temporary for testing
         if 'ports' in ele and 'datapathid' in ele:
             for p in ele['ports']:
                 actions = p.get('rule_actions', {})
@@ -52,15 +53,3 @@ def build_ryu_json(npath):
                 for index in actions.get('modify', []):
                     requests['modify'].append(_build_record(ele['datapathid'], p['rules'][index]))
     return requests
-
-def clean_rules(rt):
-    for p in rt.ports:
-        remove = []
-        for r in getattr(p, 'rules', []):
-            action = getattr(r, '_fl_action', 'maintain')
-            if action == 'delete':
-                remove.append(r)
-            elif action == 'create':
-                r._fl_action = 'maintain'
-        for r in remove:
-            p.rules.remove(r)

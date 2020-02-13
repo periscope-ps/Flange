@@ -21,19 +21,21 @@ def _rule_prio(rule):
     priority += sum([1 for k,v in rule['match'].items() if v and k in ["ip_src", "ip_dst"]])
     return priority
 
-def _get_matching_rule(port, rule):
+def _get_matching_rule(port, rule, p):
     for i,r in enumerate(port.rules):
-        if all([getattr(r, k, None) == v for k,v in rule['match'].items()]):
+        if str(p) != getattr(r, 'vlan_priority', None): continue
+        if all([getattr(r, k, None) == v for k,v in rule['match'].items() if v]):
             return i
     return None
 
 def _add_rules(port, rule):
     if not hasattr(port, "rule_actions"): port.extendSchema("rule_actions", {"create": [], "modify": []})
-    index = _get_matching_rule(port, rule)
     prio = _rule_prio(rule)
+    index = _get_matching_rule(port, rule, prio)
     match = {k:v for k,v in rule['match'].items() if v is not None}
     if index is None:
-        port.rule_actions.create.append(len(port.rules))
+        if len(port.rules) not in port.rule_actions.create:
+            port.rule_actions.create.append(len(port.rules))
         port.rules.append({"vlan_priority": str(prio), 'of_actions': [], **match})
         active = port.rules[-1]
     else:
@@ -44,7 +46,8 @@ def _add_rules(port, rule):
                 return
 
         if all([index != v for v in port.rule_actions.modify]) and \
-           any([index == v for v in port.rule_actions.create]):
+           any([index == v for v in port.rule_actions.create]) and \
+           index not in port.rule_actions.modify:
             port.rule_actions.modify.append(index)
 
     active.of_actions.append(rule['action'])
@@ -54,23 +57,36 @@ def _generate_psudoheader(path, prev=None):
         # TODO: progressive psudoheader generation
         return prev
     else:
-        try: ip_src = path[2][1].address.address
-        except AttributeError: ip_src = None
-        try: ip_dst = path[-2][1].address.address
-        except AttributeError: ip_dst = None
+        mac_src = mac_dst = ip_src = ip_dst = None
+        try:
+            ty = getattr(path[2][1].address, 'type', None)
+            if ty  == 'mac':
+                mac_src = path[2][1].address.address.strip()
+            if ty == 'ipv4':
+                ip_src = path[2][1].address.address.strip()
+        except (AttributeError, ValueError): pass
+        try:
+            ty = getattr(path[-2][1].address, 'type', None)
+            if ty == 'mac':
+                mac_dst = path[2][1].address.address.strip()
+            if ty == 'ipv4':
+                ip_dst = path[-2][1].address.address.strip()
+        except (AttributeError, ValueError): pass
 
-        return {"ip_src": ip_src,
-                "ip_dst": ip_dst,
-                "src_port": path.properties.get("l4_src", None),
-                "dst_port": path.properties.get("l4_src", None),
-                "ip_proto": path.properties.get("ip_proto", None),
-                "vlan": path.properties.get("vlan", None)}
+        return { "l2_src": mac_src,
+                 "l2_dst": mac_dst,
+                 "ip_src": ip_src,
+                 "ip_dst": ip_dst,
+                 "src_port": path.properties.get("l4_src", None),
+                 "dst_port": path.properties.get("l4_src", None),
+                 "ip_proto": path.properties.get("ip_proto", None),
+                 "vlan": path.properties.get("vlan", None)}
 
 def _insert_rules(path, interest):
     ph = _generate_psudoheader(path)
     for i, v in enumerate(path):
         ty, e = v if len(v) == 2 else (v, None)
-        if ty == 'port' and len(path) > i+2:
+        if ty == 'port':
             if path[i+1][0] in ['node', 'function']:
                 interest.append(e)
 
@@ -78,7 +94,8 @@ def _insert_rules(path, interest):
                 if "queue" in path.properties:
                     actions.append(_set_queue(path.properties['queue']))
                 try:
-                    actions.append(_forward(path[i+2][1]))
+                    if len(path) > i+2:
+                        actions.append(_forward(path[i+2][1]))
                 except AttributeError:
                     continue
 
