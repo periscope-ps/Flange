@@ -68,6 +68,8 @@ class PushFlowHandler(_BaseHandler):
                             for port in ele['ports']:
                                 if 'rule_actions' in port:
                                     port = self.rt.ports.first_where({'id': port['id']})
+                                    for rule in port.rule_actions.delete:
+                                        port.rules.remove(port.rules[rule])
                                     port.rule_actions.create = []
                                     port.rule_actions.modify = []
                                     port.rule_actions.delete = []
