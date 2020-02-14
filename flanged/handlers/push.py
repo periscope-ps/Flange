@@ -18,7 +18,7 @@ class PushFlowHandler(_BaseHandler):
         super().__init__(conf, db)
 
     def _push_to_controller(self, mods):
-        if (mods['add'] or mods['modify']) and self._conf['controller']:
+        if (mods['add'] or mods['modify'] or mods['delete']) and self._conf['controller']:
             print()
             print("New Flow Rules: {}".format(self._conf['controller']))
             print("  Adding Flows:")

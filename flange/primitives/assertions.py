@@ -76,7 +76,7 @@ class Flow(assertion):
                         path.extend([port, link])
                         ep = link.endpoints
                     except AttributeError: continue
-                
+
                     if link.directed and ep.source == port:
                         path.append(ep.sink)
                         node = ep.sink.node
