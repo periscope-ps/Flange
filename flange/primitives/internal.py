@@ -25,7 +25,7 @@ class Path(object):
             "queue": measure.PropertyBuilder("queue")
         }
         self.negation = negation
-        self.properties = properties or defaultdict(lambda: _flange_prop("<no_prop>"))
+        self.properties = properties or [defaultdict(lambda: _flange_prop("<no_prop>")) for _ in range(len(hops))]
         self.hops = hops
         self.annotations = defaultdict(list)
         self.origins = defaultdict(lambda: None)
@@ -57,8 +57,16 @@ class Path(object):
             raise PathError()
         for i, item in enumerate(self.hops):
             if self._get_type(item) == "node" and item in sinks:
-                return Path(self.hops[:i+1], self.properties), Path(self.hops[i:], self.properties)
+                return Path(self.hops[:i+1], self.properties[:i+1]), Path(self.hops[i:], self.properties[i:])
         raise PathError()
+
+    def add_property(self, name, prop):
+        for e in self.properties:
+            e[name] = prop
+
+    def merge_properties(self, path, offset=0):
+        for i in range(offset, min(len(path.hops) + offset, len(self.hops))):
+            self.properties[i].update(**path.properties[i-offset])
 
     def __len__(self):
         return len(self.hops) + 1

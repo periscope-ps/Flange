@@ -16,41 +16,28 @@ def _set_queue(queue):
     return { "SET_QUEUE": { "action_type": "SET_QUEUE", "queue_id": queue.value }}
 
 # TODO: Research actual priority hash for this
-def _rule_prio(rule):
-    priority = 500 + sum([1 for v in rule['match'].values() if v])
-    priority += sum([1 for k,v in rule['match'].items() if v and k in ["ip_src", "ip_dst"]])
+def _rule_prio(match):
+    priority = 500 + sum([1 for v in match.values() if v])
+    priority += sum([1 for k,v in match.items() if v and k in ["ip_src", "ip_dst"]])
     return priority
 
-def _get_matching_rule(port, rule, p):
+def _get_matching_rule(port, match, p):
     for i,r in enumerate(port.rules):
-        if str(p) != getattr(r, 'vlan_priority', None): continue
-        if all([getattr(r, k, None) == v for k,v in rule['match'].items() if v]):
+        if str(p) != str(getattr(r, 'vlan_priority', "")): continue
+        if all([getattr(r, k, None) == v for k,v in match.items() if v]):
             return i
     return None
 
-def _add_rules(port, rule):
-    if not hasattr(port, "rule_actions"): port.extendSchema("rule_actions", {"create": [], "modify": []})
-    prio = _rule_prio(rule)
-    index = _get_matching_rule(port, rule, prio)
-    match = {k:v for k,v in rule['match'].items() if v is not None}
-    if index is None:
-        if len(port.rules) not in port.rule_actions.create:
-            port.rule_actions.create.append(len(port.rules))
-        port.rules.append({"vlan_priority": str(prio), 'of_actions': [], **match})
-        active = port.rules[-1]
-    else:
-        if any([index == v for v in port.rule_actions.create]): return
-        active = port.rules[index]
-        for a in active.of_actions:
-            if a.to_JSON(top=False) == rule['action']:
-                return
-
-        if all([index != v for v in port.rule_actions.modify]) and \
-           any([index == v for v in port.rule_actions.create]) and \
-           index not in port.rule_actions.modify:
-            port.rule_actions.modify.append(index)
-
-    active.of_actions.append(rule['action'])
+class _Skip(Exception): pass
+class _Delete(Exception): pass
+def _create_rule(match, actions, prio):
+    return {"vlan_priority": str(prio), 'of_actions': actions, **match}
+def _modify_rule(rule, actions):
+    if len(rule.of_actions) != len(actions) or \
+       rule.of_actions.to_JSON(top=False) != actions:
+        rule.of_actions = actions
+        return True
+    return False
 
 def _generate_psudoheader(path, prev=None):
     if prev:
@@ -68,7 +55,7 @@ def _generate_psudoheader(path, prev=None):
         try:
             ty = getattr(path[-2][1].address, 'type', None)
             if ty == 'mac':
-                mac_dst = path[2][1].address.address.strip()
+                mac_dst = path[-2][1].address.address.strip()
             if ty == 'ipv4':
                 ip_dst = path[-2][1].address.address.strip()
         except (AttributeError, ValueError): pass
@@ -77,35 +64,79 @@ def _generate_psudoheader(path, prev=None):
                  "l2_dst": mac_dst,
                  "ip_src": ip_src,
                  "ip_dst": ip_dst,
-                 "src_port": path.properties.get("l4_src", None),
-                 "dst_port": path.properties.get("l4_src", None),
-                 "ip_proto": path.properties.get("ip_proto", None),
-                 "vlan": path.properties.get("vlan", None)}
+                 "src_port": path.properties[0].get("l4_src", None),
+                 "dst_port": path.properties[0].get("l4_src", None),
+                 "ip_proto": path.properties[0].get("ip_proto", None),
+                 "vlan": path.properties[0].get("vlan", None)}
 
-def _insert_rules(path, interest):
+def _insert_rules(path, interest, cb):
     ph = _generate_psudoheader(path)
     for i, v in enumerate(path):
+        do_delete = False
         ty, e = v if len(v) == 2 else (v, None)
         if ty == 'port':
-            if path[i+1][0] in ['node', 'function']:
-                interest.append(e)
+            interest.append(e)
 
-                actions = []
-                if "queue" in path.properties:
-                    actions.append(_set_queue(path.properties['queue']))
-                try:
-                    if len(path) > i+2:
-                        actions.append(_forward(path[i+2][1]))
-                except AttributeError:
-                    continue
+            try: actions = cb(v, path.properties[i-1], path[i+1], path[i+2] if len(path) > i+2 else None)
+            except _Skip: continue
+            except _Delete:
+                do_delete = True
 
-                for action in actions:
-                    _add_rules(e, {"match": ph, "action": action})
+            if not hasattr(e, "rule_actions"): e.extendSchema("rule_actions", {"create": [], "modify": [], "delete": []})
+            prio = _rule_prio(ph)
+            match = {k:v for k,v in ph.items() if v is not None}
+            rule = _get_matching_rule(e, match, prio)
+            if rule is None:
+                if not do_delete:
+                    e.rule_actions.create.append(len(e.rules))
+                    e.rules.append(_create_rule(match, actions, prio))
+            else:
+                if all([rule != v for v in e.rule_actions.create]) and \
+                   all([rule != v for v in e.rule_actions.modify]) and \
+                   all([rule != v for v in e.rule_actions.delete]):
+                    if do_delete:
+                        e.rule_actions.delete.append(rule)
+                    elif _modify_rule(e.rules[rule], actions):
+                        e.rule_actions.modify.append(rule)
 
-@only('flow')
-def openflow_mod(solution, env):
+def call(solution, cb):
     interest = []
     for path in solution.paths:
         assert path[2][0] == 'port' and path[-2][0] == 'port'
-        _insert_rules(path, interest)
+        _insert_rules(path, interest, cb)
     return solution, interest
+
+@only('flow')
+def openflow_queue(solution, env):
+    def cb(port, props, nxt, nxtnxt):
+        if "queue" in props and nxt[0] == 'link':
+            if props['queue'].value is None:
+                raise _Delete()
+            return [_set_queue(props['queue'])]
+        raise _Skip()
+    return call(solution, cb)
+
+@only('flow')
+def openflow_forward(solution, env):
+    def cb(port, props, nxt, nxtnxt):
+        try:
+            if nxt[0] in ['node', 'function'] and nxtnxt:
+                actions.append(_forward(nxtnxt[1]))
+        except AttributeError:
+            raise _Skip()
+        return actions
+    return call(solution, cb)
+
+@only('flow')
+def openflow_mod(solution, env):
+    def cb(port, props, nxt, nxtnxt):
+        actions = []
+        if "queue" in props and nxt[0] == 'link':
+            actions.append(_set_queue(props['queue']))
+        try:
+            if nxt[0] in ['node', 'function'] and nxtnxt:
+                actions.append(_forward(nxtnxt[1]))
+        except AttributeError:
+            raise _Skip()
+        return actions
+    return call(solution, cb)

@@ -47,6 +47,6 @@ class _flange_prop(fl_object):
 def PropertyBuilder(name):
     def func(path):
         prop = _flange_prop(name)
-        path.properties[name] = prop
+        path.add_property(name, prop)
         return prop
     return func

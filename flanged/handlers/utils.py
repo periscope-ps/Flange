@@ -1,4 +1,3 @@
-import base64
 import json
 
 def get_body(fn):
@@ -25,31 +24,43 @@ _of_keymap = {
 }
 
 def build_ryu_json(npath):
-    print(npath)
-    def _build_record(dpid, r):
-        record = {
-            'dpid': int(dpid),
-            'priority': r.get('vlan_priority', 500),
-            'match': {_of_keymap[k]: v for k,v in r.items() if k in _of_keymap},
-            'actions': []
-        }
-        try: del record['match']['vlan_pcp']
+    def _hash(d):
+        return hash(tuple(sorted([(k,v) for k,v in d.items()])))
+    def _mod_request(records, dpid, r):
+        dpid, match = int(dpid), {_of_keymap[k]: v for k,v in r.items() if k in _of_keymap}
+        try: del match['vlan_pcp']
         except: pass
+        h = _hash(match)
+
+        if dpid not in records: records[dpid] = record = {}
+        else: record = records[dpid]
+
+        if h in record: actions = record[h]['actions']
+        else:
+            record[h] = {
+                'dpid': dpid,
+                'priority': r.get('vlan_priority', 500),
+                'match': match,
+                'actions': []
+            }
+            actions = record[h]['actions']
+        
         for v in r.get('of_actions', []):
             for d in v.values():
                 d = {'type': d['action_type'], **d}
                 del d['action_type']
-                record['actions'].append(d)
-        return record
+                if d not in actions:
+                    actions.append(d)
 
-    requests = {"add": [], "modify": []}
+    requests = {"add": {}, "modify": {}, "delete": {}}
     for ele in npath['hops']:
-        #ele.setdefault('datapathid', 0) # Temporary for testing
         if 'ports' in ele and 'datapathid' in ele:
             for p in ele['ports']:
                 actions = p.get('rule_actions', {})
                 for index in actions.get('create', []):
-                    requests['add'].append(_build_record(ele['datapathid'], p['rules'][index]))
+                    _mod_request(requests['add'], ele['datapathid'], p['rules'][index])
                 for index in actions.get('modify', []):
-                    requests['modify'].append(_build_record(ele['datapathid'], p['rules'][index]))
+                    _mod_request(requests['modify'], ele['datapathid'], p['rules'][index])
+                for index in actions.get('delete', []):
+                    _mod_request(requests['delete'], ele['datapathid'], p['rules'][index])
     return requests

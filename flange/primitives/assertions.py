@@ -8,7 +8,7 @@ from functools import reduce
 from lace.logging import trace
 from unis.models import Link
 
-LOOPCOUNT = 3
+LOOPCOUNT = 2
 
 class assertion(_resolvable): pass
 
@@ -60,9 +60,10 @@ class Flow(assertion):
 
     def _getpaths(self):
         src, snk = self._src._members, self._snk._members
+        if not snk: return
+        
         result, loops = [], 0
         fringe,lfringe = [[x] for x in src], []
-
         while loops < LOOPCOUNT and (fringe or lfringe):
             if not fringe:
                 fringe, lfringe, loops = lfringe, [], loops + 1
@@ -91,16 +92,16 @@ class Flow(assertion):
     def resolve(self):
         for path in self._getpaths():
             try:
-                i, p, subpaths = 0, path, []
+                i, p, = 0, path
                 for rule in self._hops:
-                    if not rule.filter(p): break
                     subpath, p = p.pathsplit(rule)
+                    if not rule.filter(subpath): break
+                    path.merge_properties(subpath, i)
                     i += len(subpath) - 1
                     path.origins[i] = rule.sink
                     if isinstance(rule.sink, Function):
                         if not any([fn.name == rule.sink.name for fn in path.annotations[i]]):
                             path.annotations[i].append(rule.sink)
-                    subpaths.append(subpath)
                 yield Solution([path], {})
             except PathError: pass
 

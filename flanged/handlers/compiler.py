@@ -38,7 +38,7 @@ class CompileHandler(_BaseHandler):
 
         self._db.insert(self._usr, ir)
 
-        delta, do_ryu = {'ryu': {'add': [], 'modify': []}}, False
+        delta, do_ryu = {'ryu': {'add': {}, 'modify': {}, 'delete': {}}}, False
         if 'netpath' not in tys: delta['netpath'] = {}
         if 'ryu' in tys:
             do_ryu = True
@@ -50,8 +50,9 @@ class CompileHandler(_BaseHandler):
             for path in delta['netpath']:
                 try:
                     v = build_ryu_json(json.loads(path))
-                    delta['ryu']['add'].extend(v['add'])
-                    delta['ryu']['modify'].extend(v['modify'])
+                    delta['ryu']['add'].update(v['add'])
+                    delta['ryu']['modify'].update(v['modify'])
+                    delta['ryu']['delete'].update(v['delete'])
                 except Exception as e:
                     self._log.error("Graph missing critical attributes for generating 'netpath' - {}".format(e))
         else: delta['ryu'] = {}

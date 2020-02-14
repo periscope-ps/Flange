@@ -33,7 +33,14 @@ class PushFlowHandler(_BaseHandler):
             for modify in mods['modify']:
                 try:
                     pprint(modify)
-                    requests.post("{}/stats/flowentry/modify".format(self._conf['controller']), data=json.dumps(modify))
+                    r = requests.post("{}/stats/flowentry/modify".format(self._conf['controller']), data=json.dumps(modify))
+                    print(r.status_code)
+                except ConnectionError:
+                    raise InsertError()
+            for delete in mods['delete']:
+                try:
+                    pprint(delete)
+                    r = requests.post("{}/stats/flowentry/delete".format(self._conf['controller']), data=json.dumps(delete))
                     print(r.status_code)
                 except ConnectionError:
                     raise InsertError()
@@ -41,13 +48,17 @@ class PushFlowHandler(_BaseHandler):
 
     def _track_flangelet(self, ir):
         while True:
-            mods = {'add': [], 'modify': []}
+            mods = {'add': [], 'modify': [], 'delete': []}
             ir.reset()
             for path in ir.netpath:
                 path = json.loads(path)
                 v = build_ryu_json(path)
-                mods['add'].extend(v['add'])
-                mods['modify'].extend(v['modify'])
+                for _,rules in v['add'].items():
+                    mods['add'].extend(rules.values())
+                for _,rules in v['modify'].items():
+                    mods['modify'].extend(rules.values())
+                for _,rules in v['delete'].items():
+                    mods['delete'].extend(rules.values())
             try:
                 self._push_to_controller(mods)
                 for path in ir.netpath:
@@ -56,9 +67,10 @@ class PushFlowHandler(_BaseHandler):
                         if 'ports' in ele:
                             for port in ele['ports']:
                                 if 'rule_actions' in port:
-                                    port = rt.ports.first_where({'id': port['id']})
-                                    port.rule_actions.add = []
+                                    port = self.rt.ports.first_where({'id': port['id']})
+                                    port.rule_actions.create = []
                                     port.rule_actions.modify = []
+                                    port.rule_actions.delete = []
             except InsertError: pass
             time.sleep(5)
 
@@ -72,8 +84,6 @@ class PushFlowHandler(_BaseHandler):
     def on_post(self, req, resp, fid):
         self.tracking += 1
         ir = next(self._db.find(fid, self._usr))
-        #mods = build_ryu_json(json.loads(ir.get_record('netpath')[0]))
-        #self._push_to_ryu(mods)
         ir.live = True
 
         runner = Thread(target=self._track_flangelet, name="live_flangelet_{}".format(self.tracking), args=(ir,), daemon=True)
