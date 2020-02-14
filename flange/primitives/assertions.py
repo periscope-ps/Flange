@@ -69,25 +69,27 @@ class Flow(assertion):
                 fringe, lfringe, loops = lfringe, [], loops + 1
             origin = fringe.pop(0)
             for port in origin[-1].ports:
-                node, path = None, list(origin[1:])
-                try:
-                    path.extend([port, port.link])
-                    link, ep = path[-1], path[-1].endpoints
-                except AttributeError: continue
+                links = port.links if hasattr(port, 'links') else []
+                for link in links:
+                    node, path = None, list(origin[1:])
+                    try:
+                        path.extend([port, link])
+                        ep = link.endpoints
+                    except AttributeError: continue
                 
-                if link.directed and ep.source == port:
-                    path.append(ep.sink)
-                    node = ep.sink.node
-                elif not link.directed:
-                    path.append(ep[0 if ep[1] == port else 1])
-                    node = path[-1].node
-                if node:
-                    f = lfringe if node in path else fringe
-                    path.append(node)
-                    path.insert(0, origin[0])
-                    if node in snk:
-                        yield Path(path, negation=self.negation)
-                    f.append(path)
+                    if link.directed and ep.source == port:
+                        path.append(ep.sink)
+                        node = ep.sink.node
+                    elif not link.directed:
+                        path.append(ep[0 if ep[1] == port else 1])
+                        node = path[-1].node
+                    if node:
+                        f = lfringe if node in path else fringe
+                        path.append(node)
+                        path.insert(0, origin[0])
+                        if node in snk:
+                            yield Path(path, negation=self.negation)
+                        f.append(path)
 
     def resolve(self):
         for path in self._getpaths():
