@@ -37,6 +37,7 @@ class PushFlowHandler(_BaseHandler):
                     print(r.status_code)
                 except ConnectionError:
                     raise InsertError()
+            print("  Deleting Flows:")
             for delete in mods['delete']:
                 try:
                     pprint(delete)
@@ -68,7 +69,7 @@ class PushFlowHandler(_BaseHandler):
                             for port in ele['ports']:
                                 if 'rule_actions' in port:
                                     port = self.rt.ports.first_where({'id': port['id']})
-                                    for rule in port.rule_actions.delete:
+                                    for rule in reversed(sorted(port.rule_actions.delete)):
                                         port.rules.remove(port.rules[rule])
                                     port.rule_actions.create = []
                                     port.rule_actions.modify = []
