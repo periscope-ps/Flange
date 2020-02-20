@@ -1,11 +1,11 @@
 import json
 
 def get_body(fn):
-    def _f(self, req, resp):
+    def _f(self, req, resp, **kwargs):
         body = {}
         if req.content_length:
             body = json.loads(req.stream.read().decode('utf-8'))
-        fn(self, req, resp, body)
+        fn(self, req, resp, body, **kwargs)
     
     return _f
 

@@ -46,6 +46,13 @@ function setgraph(data) {
 	return;
     }
     livesketch = (data.hasOwnProperty("fid") ? data['fid'] : false);
+    $("#cnt-code").empty()
+    if (livesketch) {
+	var submit_btn = Button.build(["Resubmit"], $("#cnt-code"), putFlange, ["emph"]);
+    }
+    else {
+	var submit_btn = Button.build(["Submit"], $("#cnt-code"), postFlange, ["emph"]);
+    }
     $("#flange").text((data.hasOwnProperty("text") ? data['text'] : ""));
     $("#divGraph").html(data["svg"]);
 
@@ -348,12 +355,26 @@ function postFlange(btn) {
     }
 }
 
+function putFlange(btn) {
+    if ($("#flange").val()) {
+	tys = $("#txtbackends").val() || "svg,netpath";
+	mods = $("txtmods").val();
+	data = { "program": $("#flange").val(), "type": tys, "mods": mods };
+	$.ajax({
+	    url: 'f/' + livesketch,
+	    data: data,
+	    method: 'PUT'}).done(setgraph);
+    }
+}
+
 function load_livesketch(uid) {
     if (uid) {
 	if (sketch_listener) clearInterval(sketch_listener);
     
 	sketch_listener = setInterval(() => {
-	    $.get('q/' + uid, setgraph);
+	    $.get('q/' + uid, setgraph).fail(() => {
+		if (sketch_listener) clearInterval(sketch_listener);
+	    });
 	}, 500);
     }
     else {

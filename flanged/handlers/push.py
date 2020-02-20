@@ -47,8 +47,10 @@ class PushFlowHandler(_BaseHandler):
                     raise InsertError()
             print()
 
-    def _track_flangelet(self, ir):
+    def _track_flangelet(self, fid):
         while True:
+            ir = self._db.find(fid, self._usr)
+            ir.live = True
             mods = {'add': [], 'modify': [], 'delete': []}
             ir.reset()
             for path in ir.netpath:
@@ -81,16 +83,14 @@ class PushFlowHandler(_BaseHandler):
         self._other = "ls" in grants
         self.tracking = 0
         return True
-    
+
     @falcon.before(_BaseHandler.do_auth)
     @falcon.after(_BaseHandler.encode_response)
     def on_post(self, req, resp, fid):
         self.tracking += 1
-        ir = next(self._db.find(fid, self._usr))
-        ir.live = True
-
-        runner = Thread(target=self._track_flangelet, name="live_flangelet_{}".format(self.tracking), args=(ir,), daemon=True)
-        runner.start()
+        if not self._db.find(fid, self._usr).live:
+            runner = Thread(target=self._track_flangelet, name="live_flangelet_{}".format(self.tracking), args=(fid,), daemon=True)
+            runner.start()
 
     @falcon.before(_BaseHandler.do_auth)
     def on_delete(self, req, resp, fid):

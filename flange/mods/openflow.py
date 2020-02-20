@@ -79,8 +79,7 @@ def _insert_rules(path, interest, cb):
 
             try: actions = cb(v, path.properties[i-1], path[i+1], path[i+2] if len(path) > i+2 else None)
             except _Skip: continue
-            except _Delete:
-                do_delete = True
+            except _Delete: do_delete = True
 
             if not hasattr(e, "rule_actions"): e.extendSchema("rule_actions", {"create": [], "modify": [], "delete": []})
             prio = _rule_prio(ph)

@@ -4,7 +4,7 @@ import requests, tornado, tornado.httpserver
 
 from configparser import ConfigParser
 from lace.logging import trace
-from tornado.web import url
+from tornado.web import url, HTTPError
 from tornado.ioloop import IOLoop
 
 def authenticate(href):
@@ -82,24 +82,50 @@ class FlangeHandler(tornado.web.RequestHandler):
     
     
     @trace.info("FlangeHandler")
-    def post(self):
+    def post(self, fid=None):
+        if fid is not None:
+            self.set_header("Allow", "PUT")
+            raise HTTPError(405)
+
         headers = {"Authorization": "OAuth " + self.application.check_ttl(self.href)}
 
         program = self.get_argument("program", None)
         tys = self.get_argument("type", "svg").split(",")
         mods = list(filter(lambda x: x, self.get_argument("mods", "").split(",")))
-        print(tys, mods)
+        print("POST", tys, mods)
         if not program:
-            self.send_error(500)
+            raise HTTPError(500)
+
+        payload = { "program": program, "flags": { "type":  tys, "mods": mods } }
+        r = requests.post(self.href + "/c",
+                          data=json.dumps(payload),
+                          headers=headers)
+        if r.status_code >= 400:
+            self.write("Error from server - [{}]".format(r.status_code))
         else:
-            payload = { "program": program, "flags": { "type":  tys, "mods": mods } }
-            r = requests.post(self.href + "/c",
-                              data=json.dumps(payload),
-                              headers=headers)
-            if r.status_code >= 400:
-                self.write("Error from server - [{}]".format(r.status_code))
-            else:
-                self.write(r.text)
+            self.write(r.text)
+
+    @trace.info("FlangeHandler")
+    def put(self, fid=None):
+        if fid is None:
+            raise HTTPError(404)
+
+        headers = {"Authorization": "OAuth " + self.application.check_ttl(self.href)}
+
+        program = self.get_argument("program", None)
+        tys = self.get_argument("type", "svg").split(",")
+        mods = list(filter(lambda x: x, self.get_argument("mods", "").split(",")))
+        print("PUT", tys, mods)
+        if not program:
+            raise HTTPError(500)
+        payload = { "program": program, "flags": { "type":  tys, "mods": mods } }
+        r = requests.put(self.href + "/c/" + str(fid),
+                         data=json.dumps(payload),
+                         headers=headers)
+        if r.status_code >= 400:
+            self.write("Error from server - [{}]".format(r.status_code))
+        else:
+            self.write(r.text)
 
 class Flanged(tornado.web.Application):
     def initialize(self):
@@ -109,7 +135,6 @@ class Flanged(tornado.web.Application):
         if self.ttl < int(time.time()):
             self.token, self.ttl = authenticate(href)
         return self.token
-        
 
 def _read_config(file_path):
     class _Parser(ConfigParser):
@@ -118,7 +143,7 @@ def _read_config(file_path):
     if not file_path:
         return {}
     parser = _Parser(allow_no_value=True)
-    
+
     try:
         parser.read(file_path)
     except Exception:
@@ -150,14 +175,14 @@ def main():
     conf.update(**{k:v for k,v in args.__dict__.items() if v is not None})
     ROOT = os.path.dirname(os.path.abspath(__file__)) + os.sep
     app = Flanged([url(r"/", MainHandler, { "path": ROOT }),
-                   url(r"/js/(.*)", 
-                       tornado.web.StaticFileHandler, 
+                   url(r"/js/(.*)",
+                       tornado.web.StaticFileHandler,
                        { "path": ROOT + "./public/js" }),
                    url(r"/css/(.*)",
                        tornado.web.StaticFileHandler,
                        { "path": ROOT + "./public/css" }),
-                   url(r"/f", FlangeHandler,
-                       {"href": conf['flanged']}),
+                   url(r"/f", FlangeHandler, {"href": conf['flanged']}),
+                   url(r"/f/([^/]+)", FlangeHandler, {"href": conf['flanged']}),
                    url(r"/l", ListHandler, {"href": conf['flanged'] }),
                    url(r"/q/([^/]+)", QueryHandler, {"href": conf['flanged'] }),
                    url(r"/p/([^/]+)", PushHandler, {"href": conf['flanged'] })],

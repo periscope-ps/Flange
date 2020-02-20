@@ -43,6 +43,9 @@ class _Database(object):
         self._store[usr].append(flangelet)
 
     def remove(self, usr, flangelet):
+        if isinstance(flangelet, (int, str)):
+            try: flangelet = next(self.find(str(flangelet), usr))
+            except StopIteration: return False
         if usr not in self._store:
             return False
         self._store[usr].remove(flangelet)
@@ -92,6 +95,7 @@ def _get_app(unis, layout, size=None, push=False, controller=None, community=Non
     app = falcon.API()
     app.add_route('/', graph)
     app.add_route('/c', compiler)
+    app.add_route('/c/{fid}', compiler)
     app.add_route('/a', auth)
     app.add_route('/v', validator)
     app.add_route('/l', sketches)
