@@ -4,6 +4,7 @@ from configparser import ConfigParser
 from collections import defaultdict
 from unis.services.graph import UnisGrapher
 from unis.services.graphbuilder import Graph
+from unis.services.data import DataService
 
 from flanged import handlers
 from flanged import engine
@@ -67,6 +68,7 @@ def _get_app(unis, layout, size=None, push=False, controller=None, community=Non
         rt = unislib.from_community(community)
     else:
         rt = unislib.Runtime(unis, proxy={'defer_update': True})
+    rt.addService(DataService)
     rt.addService(UnisGrapher)
     rt.addService(engine.Service(db))
     engine.run(db, rt)
