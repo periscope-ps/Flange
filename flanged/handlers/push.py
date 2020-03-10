@@ -49,7 +49,9 @@ class PushFlowHandler(_BaseHandler):
 
     def _track_flangelet(self, fid):
         while True:
-            ir = self._db.find(fid, self._usr)
+            try: ir = next(self._db.find(fid, self._usr))
+            except StopIteration: return
+
             ir.live = True
             mods = {'add': [], 'modify': [], 'delete': []}
             ir.reset()
@@ -88,9 +90,12 @@ class PushFlowHandler(_BaseHandler):
     @falcon.after(_BaseHandler.encode_response)
     def on_post(self, req, resp, fid):
         self.tracking += 1
-        if not self._db.find(fid, self._usr).live:
-            runner = Thread(target=self._track_flangelet, name="live_flangelet_{}".format(self.tracking), args=(fid,), daemon=True)
-            runner.start()
+        try:
+            if not next(self._db.find(fid, self._usr)).live:
+                runner = Thread(target=self._track_flangelet, name="live_flangelet_{}".format(self.tracking), args=(fid,), daemon=True)
+                runner.start()
+        except StopIteration:
+            pass
 
     @falcon.before(_BaseHandler.do_auth)
     def on_delete(self, req, resp, fid):
