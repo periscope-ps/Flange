@@ -75,7 +75,7 @@ class _flange_rt(object):
             if isinstance(source, Runtime):
                 type(self).__runtime__ = source
             else:
-                conf = {'runtime': {'services': ['unis.services.graph.UnisGrapher']},
+                conf = {'runtime': {'services': ['unis.services.graph.UnisGrapher', 'unis.services.data.DataService']},
                         'cache': {'preload': ['nodes', 'links']}}
                 type(self).__runtime__ = Runtime(source, **conf)
 
