@@ -4,7 +4,6 @@ from unis.models import Flow
 
 from flange import compiler
 from flange.mods.user import filter_user, xsp_tag_user
-from flange.mods.openflow import openflow_mod
 from flange.utils import reset_rules, runtime
 
 from flanged.handlers.base import _BaseHandler
@@ -15,7 +14,6 @@ class CompileHandler(_BaseHandler):
         self._log = logging.getLogger('flange.flanged')
         self.rt = runtime(rt)
         super().__init__(conf, db)
-
 
     @falcon.before(_BaseHandler.do_auth)
     @falcon.after(_BaseHandler.encode_response)
@@ -70,14 +68,14 @@ class CompileHandler(_BaseHandler):
         
     def compute(self, prog, ty="netpath", mods=None):
         try:
-            env = {'usr': self._usr, 'mods': mods or [openflow_mod]}
+            env = {'usr': self._usr, 'mods': mod, 'searchdepth': 1}
             result = compiler.compile_pcode(prog, 1, env=env)
-            
+
         except Exception as exp:
             import traceback
             traceback.print_exc()
             raise falcon.HTTPUnprocessableEntity(exp)
-        
+
         return result
 
     def _compile(self, body):
