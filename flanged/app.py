@@ -10,6 +10,9 @@ from flanged import handlers
 from flanged import engine
 from flanged.settings import DEFAULT_CONFIG
 
+from flange.primitives import assertions
+assertions.LOOPCOUNT = 1
+
 # TMP Mock database object
 class _Database(object):
     def __init__(self):
