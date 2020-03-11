@@ -68,7 +68,7 @@ class CompileHandler(_BaseHandler):
         
     def compute(self, prog, ty="netpath", mods=None):
         try:
-            env = {'usr': self._usr, 'mods': mod, 'searchdepth': 1}
+            env = {'usr': self._usr, 'mods': mods, 'searchdepth': 1}
             result = compiler.compile_pcode(prog, 1, env=env)
 
         except Exception as exp:
