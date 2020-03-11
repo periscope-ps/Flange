@@ -151,7 +151,7 @@ def _passwise(program, db):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="DLT File Transfer Tool")
+    parser = argparse.ArgumentParser(description="Flange domain specific language compiler for network orchestartion")
     parser.add_argument('file', metavar='FILE', type=str, nargs=1,
                         help='File to compile')
     parser.add_argument('-o', '--output', type=str, default="out.d",
@@ -159,7 +159,7 @@ def main():
     parser.add_argument('-u', '--unis', type=str, default='http://localhost:8888')
     parser.add_argument('-v', '--verbose', type=int, default=0)
     parser.add_argument('--debugmode', action='store_true')
-    parser.add_argument('-b', '--backend', type=str, default='netpath')
+    parser.add_argument('-b', '--backend', type=str, nargs="*", default=['netpath'])
     parser.add_argument('-p', '--plugin', type=str, nargs="*")
 
     args = parser.parse_args()

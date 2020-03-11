@@ -19,7 +19,7 @@ def Builder(prop, f, default):
             ids.append(m.id if m else None)
         result = reduce(lambda x,y: f([x,y]), measures)
         return result
-    
+
     return func
 
 def StaticBuilder(prop, f, default):

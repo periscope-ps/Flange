@@ -54,11 +54,11 @@ class Path(object):
     def pathsplit(self, rule):
         sources, sinks = rule.source._members, rule.sink._members
         if self._get_type(self.hops[0]) != "node" or self.hops[0] not in sources:
-            raise PathError()
+            raise PathError("Start of path segment is not a node", hex(id(rule)))
         for i, item in enumerate(self.hops):
             if self._get_type(item) == "node" and item in sinks:
                 return Path(self.hops[:i+1], self.properties[:i+1]), Path(self.hops[i:], self.properties[i:])
-        raise PathError()
+        raise PathError("No segment matches rule", hex(id(rule)))
 
     def add_property(self, name, prop):
         for e in self.properties:
@@ -115,4 +115,9 @@ class Solution(object):
                         a.env[r][k] = b.env[r][k]
             else:
                 a.env[r] = b.env[r]
+
+        if not a.paths:
+            raise ResolutionError("Cannot take union of solutions, failed to generate solution for `a`")
+        if not b.paths:
+            raise ResolutionError("Cannot take union of solutions, failed to generate solution for `b`")
         return Solution(a.paths + b.paths, a.env)

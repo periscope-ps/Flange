@@ -99,9 +99,9 @@ def construct(inst, env):
         "<=":    diad(lambda a,b: a.__le__(b), _curry),
         "index": lambda inst: prim.lift_type(_curry(inst[1]).__getitem__(_curry(inst[2]))),
         "attr":  lambda inst: prim.lift_type(getattr(_curry(inst[2]), inst[1][1])),
-        "exists": lambda inst: prim.Exists(construct(inst[1], env)),
-        "forall": lambda inst: prim.Forall(construct(inst[1], env)),
-        "gather": lambda inst: prim.Gather(construct(inst[1], env))
+        "exists": lambda inst: prim.Exists(construct(inst[1], env), inst[1]),
+        "forall": lambda inst: prim.Forall(construct(inst[1], env), inst[1]),
+        "gather": lambda inst: prim.Gather(construct(inst[1], env), inst[1])
     }
     return ops[inst[0]](inst) if isinstance(inst, tuple) else inst
     

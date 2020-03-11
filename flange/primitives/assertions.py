@@ -61,7 +61,7 @@ class Flow(assertion):
     def _getpaths(self):
         src, snk = self._src._members, self._snk._members
         if not snk: return
-        
+
         result, loops = [], 0
         fringe,lfringe = [[x] for x in src], []
         while loops < LOOPCOUNT and (fringe or lfringe):
@@ -97,7 +97,7 @@ class Flow(assertion):
                 i, p, = 0, path
                 for rule in self._hops:
                     subpath, p = p.pathsplit(rule)
-                    if not rule.filter(subpath): break
+                    if not rule.filter(subpath): raise PathError("Rule failure", hex(id(rule)))
                     path.merge_properties(subpath, i)
                     i += len(subpath) - 1
                     path.origins[i] = rule.sink
@@ -105,7 +105,9 @@ class Flow(assertion):
                         if not any([fn.name == rule.sink.name for fn in path.annotations[i]]):
                             path.annotations[i].append(rule.sink)
                 yield Solution([path], {})
-            except PathError: pass
+            except PathError as e:
+                print("[Path Rejected]", e)
+                pass
 
     def gather(self):
         paths = []
