@@ -10,7 +10,7 @@ from lace import logging
 @logging.trace("flanged.query")
 class QueryHandler(_BaseHandler):
     def __init__(self, conf, db, rt):
-        self._log = logging.getLogger('flange.flanged')
+        self._log = logging.getLogger('flanged')
         self.rt = runtime(rt)
         super().__init__(conf, db)
 

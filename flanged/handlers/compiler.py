@@ -11,7 +11,7 @@ from flanged.handlers.utils import get_body, build_ryu_json
 
 class CompileHandler(_BaseHandler):
     def __init__(self, conf, db, rt):
-        self._log = logging.getLogger('flange.flanged')
+        self._log = logging.getLogger('flanged')
         self.rt = runtime(rt)
         super().__init__(conf, db)
 
@@ -110,5 +110,5 @@ class CompileHandler(_BaseHandler):
                     self._log.error("Graph missing critical attributes for generating 'netpath' - {}".format(e))
         else: delta['ryu'] = {}
 
-        self.rt.flush()
+        #self.rt.flush()
         return delta

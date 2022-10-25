@@ -5,6 +5,7 @@ import hashlib
 import hmac
 import json
 import time
+import logging
 
 from flanged.settings import MIME
 
@@ -15,6 +16,7 @@ class _BaseHandler(object):
     
     @classmethod
     def do_auth(self, req, resp, resource, params):
+        logging.getLogger("flanged.Auth").debug(f"Attempting to authorize - {req.auth}")
         if resource._conf.get('auth', False):
             if not req.auth:
                 raise falcon.HTTPMissingHeader("Missing OAuth token", "Authorization")

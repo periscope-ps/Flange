@@ -1,10 +1,11 @@
-import json
+import json, logging
 
 def get_body(fn):
     def _f(self, req, resp, **kwargs):
         body = {}
+        logging.getLogger("flanged.util").debug(f"Parsing body - {req.content_length} bytes")
         if req.content_length:
-            body = json.loads(req.stream.read().decode('utf-8'))
+            body = json.load(req.bounded_stream)
         fn(self, req, resp, body, **kwargs)
     
     return _f

@@ -27,7 +27,7 @@ def xsp_forward(solution, env):
                     logging.getLogger('flange.OF').warn("No compatible index on OF port")
                 elif e[i+1][0] in ['node', 'function']:
                     interest.append(s)
-                    matches = list(sorted(_find_rules(s.rules, src, dst, **props), key=lambda x: getattr(s.rules[x], 'priority', 0)))
+                    matches = list(sorted(_find_rules(s.rules, src, dst, **props[i+1]), key=lambda x: getattr(s.rules[x], 'priority', 0)))
                     if matches:
                         match = False
                         for a in s.rules[matches[0]].of_actions:
@@ -48,7 +48,7 @@ def xsp_forward(solution, env):
                             "ip_src": src, "ip_dst": dst,
                             "of_actions": [{ "OUTPUT": { "action_type": "OUTPUT", "port": index }}]
                         }
-                        for k,v in props.items():
+                        for k,v in props[i+1].items():
                             if not isinstance(v.value, type(None)) and k in key_map.keys():
                                 rule[key_map[k]] = v.value
                         s.rules.append(rule)

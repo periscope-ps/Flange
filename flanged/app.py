@@ -165,7 +165,7 @@ def main():
         from wsgiref.simple_server import make_server
         server = make_server('0.0.0.0', port, app)
         port = "" if port == 80 else port
-        log = logging.getLogger('flange.flanged')
+        log = logging.getLogger('flanged')
         log.info("Listening on port {}".format(port))
         server.serve_forever()
 
@@ -175,14 +175,15 @@ def main():
     if isinstance(conf['unis'], str):
         conf['unis'] = [str(u) for u in conf['unis'].split(',')]
 
-    log = logging.getLogger('flange.flanged')
+    log = logging.getLogger('flanged')
     if conf['debug']:
-        levels = [lace.logging.NOTSET, lace.logging.INFO, lace.logging.DEBUG, lace.logging.TRACE_OBJECTS,
+        levels = [logging.NOTSET, logging.INFO, logging.DEBUG, lace.logging.TRACE_OBJECTS,
                   lace.logging.TRACE_PUBLIC, lace.logging.TRACE_ALL]
         logging.basicConfig(format='%(color)s[%(asctime)-15s] [%(levelname)s] %(name)s%(reset)s %(message)s')
         #stdout = logging.StreamHandler()
         #stdout.setFormatter(logging.Formatter("{color}[{levelname} {asctime} {name}]{reset} {message}", style="{"))
-        log.setLevel(levels[min(conf['debug'], 5)])
+        logging.getLogger("flanged").setLevel(levels[min(conf['debug'], 5)])
+        logging.getLogger("flange").setLevel(levels[min(conf["debug"], len(levels) - 1)])
         #log.addHandler(stdout)
 
     log.info("Configuration:")
