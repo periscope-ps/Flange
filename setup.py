@@ -1,10 +1,11 @@
 from __future__ import print_function
 from setuptools import setup, Command
-import os
+import os, sys
 
-import sys
-
-version = "0.1.dev2"
+NAME="flange"
+with open(os.path.join("flange", "version.py")) as f:
+    code = compile(f.read(), "version.py", "exec")
+    exec(code)
 
 sys.path.append(".")
 if sys.version_info[0] < 3 or sys.version_info[1] < 5:
@@ -29,12 +30,13 @@ class tester(Command):
         return tests.main()
 
 setup(
-    name="flanged",
-    version=version,
+    name=NAME,
+    version=__version__,
     package_data={
         'admin': ['public/*', 'public/js/*.js', 'public/css/*.css']
     },
-    packages=["flange", "flange.tools", "flange.types", "flange.passes", "flange.utils", "flange.primitives", "flange.backend", "flange.mods", "flange.measurements", "flanged", "flanged.handlers", "flanged.tests", "admin"],
+    packages=["flange", "flange.tools", "flange.passes", "flange.resolvers",
+              "flanged", "flanged.handlers", "flanged.tests", "admin"],
     author="Joseph Cottam, Jeremy Musser",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     
@@ -49,7 +51,8 @@ setup(
         "unisrt",
         "lace",
         "requests",
-        "tornado"
+        "tornado",
+        "graphviz"
     ],
     entry_points = {
         'console_scripts': [

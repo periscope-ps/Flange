@@ -1,7 +1,6 @@
 from flange.exceptions import FlangeSyntaxError
-from flange.passes.ast_utils import match, exact, SkipInstance
-from flange.tools.block import Block
-from flange.types import fl_lift
+from flange.tools.ast_utils import match, exact, SkipInstance
+from flange.tools import fl_lift
 
 from collections import namedtuple
 
@@ -10,95 +9,120 @@ _state = namedtuple("_state", ['rules', 'options', 'exception'])
 _state.__new__.__defaults__ = (None,"")
 states = {
     "expr":    _state([]),
-    "exists":  _state([_rule("exists", ('exists', match('varlist'), ':', match('expr')))]),
-    "forall":  _state([_rule("forall", ('forall', match('varlist'), ':', match('expr')))]),
+    "exists":  _state([_rule("exists", ('exists', match('varlist'), ':', match('expr'))),
+                       _rule("forall", ('forall', match('varlist'), ':', match('expr'))),
+                       _rule("or", (match('expr'), 'or', match('expr'))),
+                       _rule("and", (match('expr'), 'and', match('expr')))]),
     "varlist": _state([_rule("varlist", (match('varpair'), ',', match('varlist')))]),
     "varpair": _state([_rule("varpair", (exact('type'), exact('sym')))], [],
                       " - Parameter list must be in the form of <type> <name>"),
     "vallist": _state([_rule("vallist", (match('expr'), ',', match('vallist')))]),
     "empty":   _state([_rule("", ('',))], ["empty"]),
-    "or":      _state([_rule("or", (match('expr'), 'or', match('expr')))]),
-    "and":     _state([_rule("and", (match('expr'), 'and', match('expr')))]),
     "not":     _state([_rule("not", ('not', match('expr')))]),
     "implies": _state([_rule("implies", (match('expr'), 'if', match('expr'), 'else', match('expr'))),
                        _rule("implies", (match('expr'), 'if', match('expr')))]),
-    "cmp":     _state([_rule("=", (match('expr'), '=', match('expr'))),
+    "cmp":     _state([_rule("==", (match('expr'), '==', match('expr'))),
                       _rule("!=", (match('expr'), '!=', match('expr'))),
                       _rule(">", (match('expr'), '>', match('expr'))),
                       _rule(">=", (match('expr'), '>=', match('expr'))),
                       _rule("<", (match('expr'), '<', match('expr'))),
-                      _rule("<=", (match('expr'), '<=', match('expr')))]),
+                       _rule("<=", (match('expr'), '<=', match('expr'))),
+                       _rule("in", (match('expr'), "in", match('expr')))]),
     "flowcat": _state([_rule("flow", (exact('sym'), '~>', match('flowcat')))]),
-    "math_t1": _state([_rule("+", (match('math_t1'), '+', match('math_t1'))),
-                       _rule("-", (match('math_t1'), '-', match('math_t1')))]),
-    "math_t2": _state([_rule("*", (match('math_t1'), '*', match('math_t1'))),
-                       _rule("/", (match('math_t1'), '/', match('math_t1'))),
-                       _rule('%', (match('math_t1'), '%', match('math_t1')))]),
+    "bw_or":   _state([_rule("|", (match('bw_xor'), '|', match('bw_or')))]),
+    "bw_xor":  _state([_rule("^", (match('bw_and'), '^', match('bw_or')))]),
+    "bw_and":  _state([_rule("&", (match('math_t1'), '&', match('bw_or')))]),
+    "math_t1": _state([_rule("+", (match('math_t2'), '+', match('math_t1'))),
+                       _rule("-", (match('math_t2'), '-', match('math_t1')))]),
+    "math_t2": _state([_rule("*", (match('index'), '*', match('math_t1'))),
+                       _rule("/", (match('index'), '/', match('math_t1'))),
+                       _rule('%', (match('index'), '%', match('math_t1')))]),
     "math_b":  _state([_rule("", (exact("tok"),))], ["replace"]),
     "index":   _state([_rule("index", (match('expr'), '[', match('expr'), ']'))], ["reverse"]),
     "attr":    _state([_rule("attr", (match('expr'), '.', match('expr'))),
                        _rule("app", (match('expr'), exact(match('vallist'))))], ["reverse"]),
+    "block":   _state([_rule("", (exact(match('expr')),))], ["replace"]),
 }
 
 failure_transitions = {
-    "expr": ["exists", "forall", "or", "flowcat", "math_t1", "index"],
-    "exists": [],
-    "forall": [],
+    "expr": ["block", "exists", "flowcat", "bw_or"],
+    "exists": ["not"],
     "varlist": ["varpair"],
     "varpair": [],
     "vallist": ["expr", "empty"],
-    "or": ["and"],
-    "and": ["not"],
     "not": ["implies"],
     "implies": ["cmp"],
     "cmp": [],
     "flowcat": ["math_b"],
+    "bw_or": ["bw_xor"],
+    "bw_xor": ["bw_and"],
+    "bw_and": ["math_t1"],
     "math_t1": ["math_t2"],
-    "math_t2": ["math_b"],
+    "math_t2": ["index"],
     "math_b": [],
     "index": ["attr"],
-    "attr": []
+    "attr": ["math_b"],
+    "block": []
 }
 
-def _do_block(n, state_name):
-    state = states[state_name]
-    options = state.options or []
+def rule_match(rule, toks, order):
+    if len(rule) == 0:
+        raise SkipInstance()
+    result, matches, rule = [], [], ([r for r in rule] + [None])
+    first, goal = float('inf'), rule.pop(0)
+    group = goal
+    for i, token in enumerate(toks):
+        if isinstance(goal, match):
+            if matches:
+                first, matches, _ = min(first, i), [], result.append(group(order(matches)))
+            group = goal
+            try: goal = rule.pop(0)
+            except IndexError: goal = None
+
+        if token.val != goal:
+            matches.append(token)
+        else:
+            if isinstance(group, match):
+                result.append(group(order(matches)))
+            elif matches:
+                raise SkipInstance()
+            try:
+                first, matches, goal, group = min(first, i), [], rule.pop(0), None
+            except IndexError: break
+    if rule and rule[0] is not None:
+        raise SkipInstance()
+    if matches and group:
+        result.append(group(matches))
+    return first, result
+
+def _do_block(n, state_name=None):
+    if not hasattr(n, "tokens"):
+        return fl_lift(n)
+    state_name = state_name or getattr(n, 'tag', 'expr')
+    state, options = states[state_name], (states[state_name].options or [])
     def _rev(ls):
         return list(reversed(ls)) if 'reverse' in options else list(ls)
-    ls, rules = _rev(n.tokens), [_rev(r.v) for r in state.rules]
-    matches, fns = [[] for _ in range(len(rules))], [[] for _ in range(len(rules))]
-    first = [(i, len(ls)) for i in range(len(rules))]
+    toks = _rev(n.tokens)
 
-    if "empty" in options and len(ls) == 0:
+    if "empty" in options and len(toks) == 0:
         return n
-    
-    # Group tokens by delimiter
-    for j, r in enumerate(rules):
-        for i, t in enumerate(ls):
-            if r and r[0] == t.val:
-                first[j], _ = (j, min(first[j][1], i)), r.pop(0)
-            else:
-                fn = None
-                if r and isinstance(r[0], match):
-                    fn, _ = r.pop(0), matches[j].append([])
-                if not matches[j]: break
-                matches[j][-1].append(t)
-                if fn:
-                    fns[j].append(fn)
-                    if isinstance(fn, exact):
-                        matches[j].append([])
 
-    # Search for first full match
-    for i, _ in sorted(first, key=lambda x: x[1]):
-        m = list(filter(bool, matches[i]))
-        if len(m) != len(fns[i]) or rules[i]: continue
-        try:
-            groups = _rev([fn(_rev(m[j])) for j, fn in enumerate(fns[i])])
-        except SkipInstance:
+    # Group tokens by delimiter
+    matches = []
+    for j, r in enumerate([_rev(r.v) for r in state.rules]):
+        try: matches.append((state.rules[j], rule_match(r, toks, _rev)))
+        except SkipInstance: pass
+
+    # Select first match
+    for rule, (_, groups) in sorted(matches, key=lambda x: x[1][0]):
+        if len(groups) != len([m for m in rule.v if isinstance(m, match)]):
             continue
+        groups = _rev(groups)
         if "replace" in options:
+            if hasattr(groups[0], "tag"):
+                return _do_block(groups[0], groups[0].tag)
             return groups[0]
-        n.tag, n.tokens = state.rules[i].tag, groups
+        n.tag, n.tokens = rule.tag, groups
         return n
 
     # Search next states in chain for match
@@ -107,15 +131,16 @@ def _do_block(n, state_name):
         try:
             return _do_block(n, n_state)
         except FlangeSyntaxError as exp:
-            msg = msg if msg[17:] else exp.msg
+            msg = msg if state.exception else exp.msg
             continue
     raise FlangeSyntaxError(msg, n)
 
 def _visit(n):
-    if isinstance(n, Block):
-        return _do_block(n, getattr(n, 'state', 'expr'))
-    else:
-        return fl_lift(n)
+    result = _do_block(n)
+    if hasattr(result, "tokens"):
+        result.tokens = [_visit(t) for t in result.tokens]
+    return result
 
 def run(program, env):
-    return program.apply(_visit)
+    program.tag = "expr"
+    return _visit(program)

@@ -9,6 +9,7 @@ class Symbol(Token):
         valid_name = "[_A-Za-z][A-Za-z0-9_!@#$%^?*]*"
         if not re.match(valid_name, self.val):
             raise FlangeSyntaxError("invalid symbol name", self)
+
     def __repr__(self):
         return "(sym " + self.val + ")"
 

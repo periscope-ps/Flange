@@ -86,7 +86,7 @@ ss_trans = {"base": ["single_string", [YIELD, PUSH, YIELD]],
             "single_escape": ["single_string", [PUSH]],
             "double_escape": ["double_string", [PUSH]]}
 ds_trans = {"base": ["double_string", [YIELD, PUSH, YIELD]],
-            "combine": ["double_string", [PUSH, YIELD]],
+            "combine": ["double_string", [YIELD, PUSH, YIELD]],
             "num": ["double_string", [YIELD, PUSH, YIELD]],
             "single_string": ["single_string", [PUSH]],
             "double_string": ["base", [YIELD, PUSH, YIELD]],

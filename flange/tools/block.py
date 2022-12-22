@@ -1,7 +1,8 @@
-from flange.utils import FlangeError
-from flange.tools.visitor import Visitor
+from __future__ import annotations
+from flange import tools
 
-import os
+import os, json
+from dataclasses import dataclass, field
 
 def ast_pprint(ast):
     _, cols = os.popen('stty size', 'r').read().split()
@@ -22,16 +23,24 @@ def ast_pprint(ast):
             return pad + str(v)
     return maybe_split(ast, "")
 
-class Block(Visitor):
-    __slots__ = ['tokens', 'tag']
-    def __init__(self, tag, tokens=None):
-        tokens = tokens or []
-        self.tag, self.tokens = tag, tokens
-
+@dataclass(slots=True)
+class Block(object):
+    tag: str
+    tokens: list[Token | Block] = field(default_factory=list)
     @property
     def val(self):
         return self.tokens
 
+    def serialize(self):
+        return {"tokens": [t.serialize() for t in self.tokens], "tag": self.tag}
+    @classmethod
+    def deserialize(cls, data):
+        if isinstance(data, str): data = json.loads(data)
+        if "tag" in data:
+            return cls(data["tag"], [Block.deserialize(t) for t in data["tokens"]])
+        else:
+            return tools.types[data["tokentype"]].deserialize(data)
+    
     def __repr__(self):
         return ast_pprint(self)
     
